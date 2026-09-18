@@ -1,0 +1,14 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: es-pod-kill
+  namespace: elastic
+spec:
+  action: pod-kill
+  mode: one
+  duration: 1s
+  selector:
+    namespaces:
+      - elastic
+    labelSelectors:
+      elasticsearch.k8s.elastic.co/cluster-name: chaos

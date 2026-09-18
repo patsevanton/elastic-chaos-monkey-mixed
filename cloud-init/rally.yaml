@@ -1,0 +1,14 @@
+#cloud-config
+package_update: true
+packages:
+  - python3
+  - python3-pip
+  - python3-venv
+  - jq
+  - curl
+runcmd:
+  - mkdir -p /home/ubuntu/id-log /home/ubuntu/.rally
+  - chown -R ubuntu:ubuntu /home/ubuntu/id-log /home/ubuntu/.rally
+  - sudo -u ubuntu python3 -m venv /home/ubuntu/venv
+  - sudo -u ubuntu /home/ubuntu/venv/bin/pip install --upgrade pip esrally
+  - echo 'export PATH="$HOME/venv/bin:$PATH"' >> /home/ubuntu/.bashrc

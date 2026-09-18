@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: elasticsearch-exporter
+  namespace: elastic
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch-exporter
+  namespace: elastic
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: elasticsearch-exporter
+  template:
+    metadata:
+      labels:
+        app: elasticsearch-exporter
+    spec:
+      serviceAccountName: elasticsearch-exporter
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: elasticsearch-exporter
+      containers:
+        - name: exporter
+          image: quay.io/prometheuscommunity/elasticsearch-exporter:v1.9.0
+          args:
+            - --es.uri=http://chaos-es-http.elastic.svc:9200
+            - --es.all
+            - --es.indices
+            - --es.cluster_settings
+          ports:
+            - name: metrics
+              containerPort: 9114
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-exporter
+  namespace: elastic
+  labels:
+    app: elasticsearch-exporter
+spec:
+  selector:
+    app: elasticsearch-exporter
+  ports:
+    - name: metrics
+      port: 9114
+      targetPort: metrics
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: elasticsearch-exporter
+  namespace: elastic
+spec:
+  selector:
+    matchLabels:
+      app: elasticsearch-exporter
+  namespaceSelector:
+    matchNames:
+      - elastic
+  endpoints:
+    - port: metrics
+      interval: 20s

@@ -1,0 +1,127 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: chaos
+  namespace: elastic
+spec:
+  version: 9.5.4
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+    service:
+      metadata:
+        annotations:
+          yandex.cloud/load-balancer-type: internal
+          yandex.cloud/subnet-id: NLB_SUBNET_ID
+      spec:
+        type: LoadBalancer
+  nodeSets:
+    - name: zone-a
+      count: 1
+      config:
+        node.roles: ["master", "data", "ingest"]
+        node.attr.zone: ru-central1-a
+        cluster.routing.allocation.awareness.attributes: zone
+        cluster.routing.allocation.awareness.force.zone.values: ru-central1-a,ru-central1-b,ru-central1-d
+        xpack.security.authc.anonymous.username: anonymous
+        xpack.security.authc.anonymous.roles: superuser
+        xpack.security.authc.anonymous.authz_exception: false
+      podTemplate:
+        spec:
+          nodeSelector:
+            topology.kubernetes.io/zone: ru-central1-a
+          containers:
+            - name: elasticsearch
+              env:
+                - name: ES_JAVA_OPTS
+                  value: -Xms3g -Xmx3g
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: 6Gi
+                limits:
+                  cpu: "6"
+                  memory: 6Gi
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: yc-network-ssd
+            resources:
+              requests:
+                storage: 100Gi
+    - name: zone-b
+      count: 1
+      config:
+        node.roles: ["master", "data", "ingest"]
+        node.attr.zone: ru-central1-b
+        cluster.routing.allocation.awareness.attributes: zone
+        cluster.routing.allocation.awareness.force.zone.values: ru-central1-a,ru-central1-b,ru-central1-d
+        xpack.security.authc.anonymous.username: anonymous
+        xpack.security.authc.anonymous.roles: superuser
+        xpack.security.authc.anonymous.authz_exception: false
+      podTemplate:
+        spec:
+          nodeSelector:
+            topology.kubernetes.io/zone: ru-central1-b
+          containers:
+            - name: elasticsearch
+              env:
+                - name: ES_JAVA_OPTS
+                  value: -Xms3g -Xmx3g
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: 6Gi
+                limits:
+                  cpu: "6"
+                  memory: 6Gi
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: yc-network-ssd
+            resources:
+              requests:
+                storage: 100Gi
+    - name: zone-d
+      count: 1
+      config:
+        node.roles: ["master", "data", "ingest"]
+        node.attr.zone: ru-central1-d
+        cluster.routing.allocation.awareness.attributes: zone
+        cluster.routing.allocation.awareness.force.zone.values: ru-central1-a,ru-central1-b,ru-central1-d
+        xpack.security.authc.anonymous.username: anonymous
+        xpack.security.authc.anonymous.roles: superuser
+        xpack.security.authc.anonymous.authz_exception: false
+      podTemplate:
+        spec:
+          nodeSelector:
+            topology.kubernetes.io/zone: ru-central1-d
+          containers:
+            - name: elasticsearch
+              env:
+                - name: ES_JAVA_OPTS
+                  value: -Xms3g -Xmx3g
+              resources:
+                requests:
+                  cpu: "4"
+                  memory: 6Gi
+                limits:
+                  cpu: "6"
+                  memory: 6Gi
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: yc-network-ssd
+            resources:
+              requests:
+                storage: 100Gi

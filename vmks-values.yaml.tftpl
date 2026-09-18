@@ -1,0 +1,130 @@
+grafana:
+  replicas: 3
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: web
+    hosts:
+      - grafana.${ingress_public_ip}.sslip.io
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: grafana
+
+defaultDatasources:
+  victoriametrics:
+    datasources:
+      - name: VictoriaMetrics
+        type: prometheus
+        access: proxy
+        isDefault: true
+        jsonData:
+          httpMethod: POST
+          queryTimeout: 300s
+          timeInterval: 30s
+
+defaultRules:
+  groups:
+    etcd:
+      enabled: false
+    kubernetes-system-scheduler:
+      enabled: false
+    kubernetes-system-controller-manager:
+      enabled: false
+    kube-scheduler.rules:
+      enabled: false
+
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+vmalert:
+  enabled: false
+alertmanager:
+  enabled: false
+
+vmsingle:
+  enabled: false
+
+vmcluster:
+  enabled: true
+  spec:
+    replicationFactor: 3
+    vmstorage:
+      useDefaultResources: false
+      replicaCount: 3
+      podDisruptionBudget:
+        minAvailable: 2
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmstorage
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: yc-network-hdd
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 30Gi
+      resources:
+        limits:
+          cpu: "1"
+          memory: 2Gi
+        requests:
+          cpu: "1"
+          memory: 2Gi
+    vmselect:
+      useDefaultResources: false
+      replicaCount: 2
+      podDisruptionBudget:
+        minAvailable: 1
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: vmselect
+      resources:
+        limits:
+          cpu: "500m"
+          memory: 512Mi
+        requests:
+          cpu: 100m
+          memory: 256Mi
+    vminsert:
+      replicaCount: 2
+      podDisruptionBudget:
+        minAvailable: 1
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: vminsert
+      resources:
+        limits:
+          cpu: "500m"
+          memory: 512Mi
+        requests:
+          cpu: 100m
+          memory: 128Mi
+
+vmagent:
+  spec:
+    replicaCount: 2
+    scrapeInterval: 20s
+    podDisruptionBudget:
+      minAvailable: 1

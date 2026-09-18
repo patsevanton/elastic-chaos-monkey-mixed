@@ -1,0 +1,19 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: es-network-loss
+  namespace: elastic
+spec:
+  action: loss
+  mode: all
+  duration: 15m
+  selector:
+    namespaces:
+      - elastic
+    labelSelectors:
+      elasticsearch.k8s.elastic.co/cluster-name: chaos
+    nodeSelectors:
+      topology.kubernetes.io/zone: ru-central1-b
+  loss:
+    loss: "30"
+    correlation: "0"

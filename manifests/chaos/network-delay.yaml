@@ -1,0 +1,20 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: es-network-delay
+  namespace: elastic
+spec:
+  action: delay
+  mode: all
+  duration: 15m
+  selector:
+    namespaces:
+      - elastic
+    labelSelectors:
+      elasticsearch.k8s.elastic.co/cluster-name: chaos
+    nodeSelectors:
+      topology.kubernetes.io/zone: ru-central1-b
+  delay:
+    latency: "500ms"
+    correlation: "0"
+    jitter: "0ms"
