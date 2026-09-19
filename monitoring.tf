@@ -52,6 +52,7 @@ resource "helm_release" "traefik" {
     yandex_kubernetes_node_group.k8s_node_group_a,
     yandex_kubernetes_node_group.k8s_node_group_b,
     yandex_kubernetes_node_group.k8s_node_group_d,
+    time_sleep.wait_lb_release,
   ]
 }
 

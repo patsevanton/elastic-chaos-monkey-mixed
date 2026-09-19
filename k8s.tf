@@ -50,7 +50,13 @@ resource "yandex_kubernetes_cluster" "elastic_chaos" {
   node_service_account_id = yandex_iam_service_account.elastic_chaos_monkey.id
   release_channel         = "STABLE"
 
-  depends_on = [time_sleep.wait_sa]
+  # Зависимость от ожидания применения IAM-ролей.
+  # При destroy кластер должен удалиться ДО time_sleep.wait_lb_release (пауза перед освобождением IP),
+  # чтобы cloud-controller-manager успел снять LoadBalancer с адреса yandex_vpc_address.ingress.
+  depends_on = [
+    time_sleep.wait_sa,
+    time_sleep.wait_lb_release,
+  ]
 }
 
 resource "yandex_kubernetes_node_group" "k8s_node_group_a" {
