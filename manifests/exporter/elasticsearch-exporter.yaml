@@ -34,7 +34,7 @@ spec:
             - --es.uri=http://chaos-es-http.elastic.svc:9200
             - --es.all
             - --es.indices
-            - --es.cluster_settings
+            - --collector.clustersettings
           ports:
             - name: metrics
               containerPort: 9114

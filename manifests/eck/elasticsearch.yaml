@@ -31,6 +31,12 @@ spec:
         spec:
           nodeSelector:
             topology.kubernetes.io/zone: ru-central1-a
+          initContainers:
+            - name: sysctl
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              command: ['sh', '-c', 'sysctl -w vm.max_map_count=1048576']
           containers:
             - name: elasticsearch
               env:
@@ -67,6 +73,12 @@ spec:
         spec:
           nodeSelector:
             topology.kubernetes.io/zone: ru-central1-b
+          initContainers:
+            - name: sysctl
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              command: ['sh', '-c', 'sysctl -w vm.max_map_count=1048576']
           containers:
             - name: elasticsearch
               env:
@@ -103,6 +115,12 @@ spec:
         spec:
           nodeSelector:
             topology.kubernetes.io/zone: ru-central1-d
+          initContainers:
+            - name: sysctl
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              command: ['sh', '-c', 'sysctl -w vm.max_map_count=1048576']
           containers:
             - name: elasticsearch
               env:
