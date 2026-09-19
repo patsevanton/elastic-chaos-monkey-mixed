@@ -99,7 +99,7 @@ Headscale — координатор и DERP. В `10.0.x` пакеты идут,
 - `vmks-values.yaml` Terraform на apply не пишет. После IP internal NLB Traefik — скрипт из `vmks-values.yaml.tftpl`.
 - `prometheus-community/elasticsearch_exporter`: **3 реплики** в `a`/`b`/`d`.
 - ECK operator и Chaos Mesh controller: **по 3 реплики**.
-- Kibana (ECK): **3 реплики** в `a`/`b`/`d`, Ingress Traefik, `kibana.<INTERNAL_NLB_IP>.sslip.io`, **basic auth только на Ingress** (Secret не в git). Kibana ходит в ES без пароля. Stack Monitoring не заменяет Grafana.
+- Kibana (ECK): **3 реплики** в `a`/`b`/`d`, Ingress Traefik, `kibana.<INTERNAL_NLB_IP>.sslip.io`. **Basic auth на Ingress нет** — Traefik только из VPC/tailnet. Kibana ходит в ES без пароля. Переменная `kibana_ingress_password` и `htpasswd` не нужны. Stack Monitoring не заменяет Grafana.
 
 Публичный `yandex_vpc_address.ingress` и `time_sleep.wait_lb_release` не используются.
 
@@ -130,7 +130,7 @@ Rally --VPC--> internal NLB Elasticsearch :9200
 - Rally VM → internal NLB `:9200` → три ES-пода. Kibana в путь нагрузки не входит.
 - elasticsearch_exporter → ES HTTP без auth → vmagent → VMCluster. Grafana читает VM.
 - Проценты ошибок Rally — с VM в таблицы README вручную.
-- Браузер → tailnet → Traefik (`*.<internal-ip>.sslip.io`) → Ingress basic auth → Kibana → ES без пароля.
+- Браузер → tailnet → Traefik (`*.<internal-ip>.sslip.io`) → Kibana → ES без пароля.
 - Chaos Mesh целится только в ES в зоне `b`. AZ-outage — stop/start VM node group `b`.
 
 ## Порядок после apply
@@ -174,7 +174,7 @@ Cloud-init: `cloud-init/rally.yaml`, `cloud-init/headscale.yaml`.
 - `manifests/eck/` — operator, Elasticsearch CR, Kibana CR.
 - `manifests/chaos/` — PodChaos, NetworkChaos loss, NetworkChaos delay.
 - `manifests/exporter/` — elasticsearch_exporter.
-- `manifests/ingress/` — Ingress Kibana + middleware basic auth.
+- `manifests/ingress/` — Ingress Kibana без middleware basic auth.
 
 `scripts/` — stop/start ноды группы `b`, сверка bulk vs `_count`, sample mget, render `vmks-values.yaml` по IP Traefik.
 
@@ -182,7 +182,7 @@ Cloud-init: `cloud-init/rally.yaml`, `cloud-init/headscale.yaml`.
 
 ## Проверка стенда
 
-После apply и join в tailnet: `https://headscale.<PIP>.sslip.io/health`; `tailscale status`; три ноды `a/b/d`; ES 3 пода, health green, шарды по зонам; Kibana и Grafana по `*.<internal-nlb>.sslip.io` (Kibana после basic auth); SSH на Rally по внутреннему IP; Rally достукивается до NLB `:9200` без TLS/пароля.
+После apply и join в tailnet: `https://headscale.<PIP>.sslip.io/health`; `tailscale status`; три ноды `a/b/d`; ES 3 пода, health green, шарды по зонам; Kibana и Grafana по `*.<internal-nlb>.sslip.io` без Ingress basic auth; SSH на Rally по внутреннему IP; Rally достукивается до NLB `:9200` без TLS/пароля.
 
 Нагрузка: ingest `nyc_taxis` завершается; `_count` согласован с треком; mixed стартует, id-лог пишется.
 
