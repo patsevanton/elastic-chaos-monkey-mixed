@@ -51,7 +51,7 @@
 
 ### Доступ: Headscale
 
-Единственный публичный адрес стенда — зарезервированный IPv4 Headscale VM.
+Единственный публичный адрес стенда — `yandex_vpc_address.ingress`, NAT на Headscale VM. Отдельный reserved IP для Headscale не создаём.
 
 - Отдельная VM в **`ru-central1-a`**, не в k8s: **2 vCPU / 4 ГБ / HDD 20 ГиБ**, preemptible, образ Ubuntu как у Rally (`fd806c8slu9j1pa87msc`).
 - NAT на этой VM нужен (клиенты и Let's Encrypt).
@@ -95,13 +95,12 @@ Headscale — координатор и DERP. В `10.0.x` пакеты идут,
 - VMCluster **replicationFactor: 3**, по одному `vmstorage` в `a`/`b`/`d`: **1 vCPU / 2 ГиБ RAM / HDD 30 ГиБ**.
 - В values отключить scrape-job и recording-правила control-plane Yandex Managed K8s (`kubeControllerManager`, `kubeScheduler`, `kubeEtcd`, группы `etcd`, `kubernetes-system-scheduler`, `kubernetes-system-controller-manager`, `kube-scheduler.rules`).
 - Grafana: **3 реплики** в `a`/`b`/`d`, Ingress Traefik, `grafana.<INTERNAL_NLB_IP>.sslip.io`.
-- Traefik: helm CLI, chart **41.6.0**, **3 реплики** в `a`/`b`/`d`. Service LoadBalancer **internal** (аннотации `yandex.cloud/load-balancer-type: internal`, `yandex.cloud/subnet-id` = subnet `a`). Без зарезервированного публичного IP.
+- Traefik: helm CLI, chart **41.6.0**, **3 реплики** в `a`/`b`/`d`. Service LoadBalancer **internal** (аннотации `yandex.cloud/load-balancer-type: internal`, `yandex.cloud/subnet-id` = subnet `a`). Без reserved IP.
+- `time_sleep.wait_lb_release` остаётся: на destroy кластера CCM должен успеть снять internal NLB Traefik (60 с), как раньше для публичного Ingress.
 - `vmks-values.yaml` Terraform на apply не пишет. После IP internal NLB Traefik — скрипт из `vmks-values.yaml.tftpl`.
 - `prometheus-community/elasticsearch_exporter`: **3 реплики** в `a`/`b`/`d`.
 - ECK operator и Chaos Mesh controller: **по 3 реплики**.
 - Kibana (ECK): **3 реплики** в `a`/`b`/`d`, Ingress Traefik, `kibana.<INTERNAL_NLB_IP>.sslip.io`. **Basic auth на Ingress нет** — Traefik только из VPC/tailnet. Kibana ходит в ES без пароля. Переменная `kibana_ingress_password` и `htpasswd` не нужны. Stack Monitoring не заменяет Grafana.
-
-Публичный `yandex_vpc_address.ingress` и `time_sleep.wait_lb_release` не используются.
 
 ### Хаос
 
