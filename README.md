@@ -37,6 +37,9 @@ terraform init
 terraform apply
 ```
 
+Перед `terraform apply` положите `headscale_0.29.3_linux_amd64.deb` в корень
+проекта — он копируется на Headscale VM (в git не коммитится).
+
 Ключ ноутбука и вход в tailnet:
 
 ```bash

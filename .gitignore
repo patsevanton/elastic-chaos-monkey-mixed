@@ -46,3 +46,6 @@ terraform.rc
 # Values-файлы, сгенерированные Terraform из *.yaml.tftpl
 vmks-values.yaml
 traefik-values.yaml
+
+# Deb-пакеты, копируемые с ноутбука на VM (не пушим бинарь)
+*.deb

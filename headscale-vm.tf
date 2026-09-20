@@ -34,6 +34,18 @@ resource "yandex_compute_instance" "headscale" {
       ingress_ip     = local.ingress_ip
     })
   }
+
+  provisioner "file" {
+    source      = "${path.module}/headscale_0.29.3_linux_amd64.deb"
+    destination = "/tmp/headscale.deb"
+  }
+
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    host        = self.network_interface[0].nat_ip_address
+    private_key = file("~/.ssh/id_ed25519")
+  }
 }
 
 data "external" "headscale_laptop_preauth" {
@@ -57,8 +69,8 @@ output "headscale_url" {
 }
 
 output "headscale_login_command" {
-  description = "Шаблон tailscale up для ноутбука"
-  value       = "tailscale up --login-server=https://${local.headscale_fqdn} --accept-routes"
+  description = "Команда tailscale up для ноутбука (с preauth-ключом)"
+  value       = "sudo tailscale up --login-server=https://${local.headscale_fqdn} --auth-key=$(terraform output -raw headscale_laptop_preauth) --accept-routes"
 }
 
 output "headscale_laptop_preauth" {

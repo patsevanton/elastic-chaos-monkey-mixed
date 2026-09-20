@@ -19,18 +19,15 @@ write_files:
       PIP="${ingress_ip}"
       sysctl --system
       ok=0
-      for url in \
-        "https://downloads.sourceforge.net/project/headscale.mirror/v0.29.3/headscale_0.29.3_linux_amd64.deb" \
-        "https://github.com/juanfont/headscale/releases/download/v0.29.3/headscale_0.29.3_linux_amd64.deb"
-      do
-        if curl -fsSL --connect-timeout 20 --max-time 180 -o /tmp/headscale.deb "$url"; then
+      for i in $(seq 1 120); do
+        if [ -s /tmp/headscale.deb ]; then
           ok=1
           break
         fi
-        echo "headscale deb download failed: $url" >&2
+        sleep 5
       done
       if [ "$ok" != 1 ]; then
-        echo "headscale deb download failed from GitHub and SourceForge" >&2
+        echo "headscale deb was not copied to /tmp/headscale.deb" >&2
         exit 1
       fi
       apt-get install -y /tmp/headscale.deb
