@@ -20,10 +20,10 @@ write_files:
       sysctl --system
       ok=0
       for url in \
-        "https://github.com/juanfont/headscale/releases/download/v0.29.3/headscale_0.29.3_linux_amd64.deb" \
-        "https://downloads.sourceforge.net/project/headscale.mirror/v0.29.3/headscale_0.29.3_linux_amd64.deb"
+        "https://downloads.sourceforge.net/project/headscale.mirror/v0.29.3/headscale_0.29.3_linux_amd64.deb" \
+        "https://github.com/juanfont/headscale/releases/download/v0.29.3/headscale_0.29.3_linux_amd64.deb"
       do
-        if curl -fsSL --connect-timeout 30 --max-time 180 -o /tmp/headscale.deb "$url"; then
+        if curl -fsSL --connect-timeout 20 --max-time 180 -o /tmp/headscale.deb "$url"; then
           ok=1
           break
         fi
