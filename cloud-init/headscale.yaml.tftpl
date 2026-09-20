@@ -1,9 +1,13 @@
 #cloud-config
 package_update: true
+debconf_selections: |
+  iptables-persistent iptables-persistent/autosave_v4 boolean true
+  iptables-persistent iptables-persistent/autosave_v6 boolean true
 packages:
   - curl
   - ca-certificates
   - python3
+  - iptables-persistent
 write_files:
   - path: /etc/sysctl.d/99-tailscale.conf
     permissions: "0644"
@@ -18,6 +22,17 @@ write_files:
       FQDN="${headscale_fqdn}"
       PIP="${ingress_ip}"
       sysctl --system
+      IFACE="$$(ip -o -4 route show default | awk '{print $$5; exit}')"
+      if [ -z "$${IFACE}" ]; then
+        echo "no default-route iface for MASQUERADE" >&2
+        exit 1
+      fi
+      for cidr in 10.0.1.0/24 10.0.2.0/24 10.0.3.0/24 10.0.4.0/24; do
+        iptables -t nat -C POSTROUTING -s "$$cidr" -o "$$IFACE" -j MASQUERADE 2>/dev/null || \
+          iptables -t nat -A POSTROUTING -s "$$cidr" -o "$$IFACE" -j MASQUERADE
+      done
+      mkdir -p /etc/iptables
+      iptables-save > /etc/iptables/rules.v4
       curl -fsSL -o /tmp/headscale.deb \
         "https://github.com/juanfont/headscale/releases/download/v0.29.3/headscale_0.29.3_linux_amd64.deb"
       apt-get install -y /tmp/headscale.deb

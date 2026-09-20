@@ -1,7 +1,7 @@
 resource "yandex_compute_instance" "headscale" {
   name                      = "elastic-chaos-headscale"
   platform_id               = "standard-v3"
-  zone                      = local.subnet_a_zone
+  zone                      = local.subnet_public_zone
   allow_stopping_for_update = true
 
   resources {
@@ -22,7 +22,7 @@ resource "yandex_compute_instance" "headscale" {
   }
 
   network_interface {
-    subnet_id      = local.subnet_a_id
+    subnet_id      = local.subnet_public_id
     nat            = true
     nat_ip_address = yandex_vpc_address.ingress.external_ipv4_address[0].address
   }

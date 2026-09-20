@@ -3,12 +3,12 @@ resource "yandex_vpc_network" "elastic_chaos" {
   folder_id = local.folder_id
 }
 
-resource "yandex_vpc_gateway" "nat" {
-  folder_id   = local.folder_id
-  name        = "elastic-chaos-nat-gw"
-  description = "NAT gateway for private subnets egress"
-
-  shared_egress_gateway {}
+resource "yandex_vpc_subnet" "elastic_chaos_public" {
+  folder_id      = local.folder_id
+  name           = "elastic-chaos-public"
+  v4_cidr_blocks = ["10.0.0.0/24"]
+  zone           = "ru-central1-a"
+  network_id     = yandex_vpc_network.elastic_chaos.id
 }
 
 resource "yandex_vpc_route_table" "rt" {
@@ -18,7 +18,7 @@ resource "yandex_vpc_route_table" "rt" {
 
   static_route {
     destination_prefix = "0.0.0.0/0"
-    gateway_id         = yandex_vpc_gateway.nat.id
+    next_hop_address   = yandex_compute_instance.headscale.network_interface[0].ip_address
   }
 }
 

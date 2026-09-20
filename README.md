@@ -14,7 +14,7 @@ ECK HTTP без TLS. Пароль для Rally не нужен: anonymous `super
 
 ## Стенд
 
-Terraform: Managed K8s **1.33**, SA `elastic-chaos-monkey`, три node group по одной preemptible-ноде **8 vCPU / 16 ГБ**, диск ноды **HDD**, без публичного IP, NAT. Зоны worker’ов: `a`, `b`, `d`. PVC Elasticsearch — **yc-network-ssd 100 ГиБ** (исключение из HDD).
+Terraform: Managed K8s **1.33**, SA `elastic-chaos-monkey`, три node group по одной preemptible-ноде **8 vCPU / 16 ГБ**, диск ноды **HDD**, без публичного IP. Egress — Headscale VM как NAT instance. Зоны worker’ов: `a`, `b`, `d`. PVC Elasticsearch — **yc-network-ssd 100 ГиБ** (исключение из HDD).
 
 | Компонент | Куда |
 |---|---|
@@ -26,7 +26,7 @@ Terraform: Managed K8s **1.33**, SA `elastic-chaos-monkey`, три node group п
 | Grafana / Traefik ×3 | `vmks` / `traefik` |
 | VMCluster RF=3 | vmstorage 1 vCPU / 2 ГиБ / HDD 30 ГиБ |
 | Rally VM | `ru-central1-e`, 8 vCPU / 16 ГБ, HDD 100 ГиБ, без публичного IP |
-| Headscale VM | `ru-central1-a`, 2 vCPU / 4 ГБ, HDD 20 ГиБ, единственный публичный IP |
+| Headscale VM | `ru-central1-a`, `10.0.0.0/24`, 2 vCPU / 4 ГБ, HDD 20 ГиБ, единственный публичный IP, NAT instance |
 
 Инфра подробно: [INFRASTRUCTURE.md](INFRASTRUCTURE.md).
 

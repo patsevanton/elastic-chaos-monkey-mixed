@@ -1,12 +1,12 @@
 # Развёртывание инфраструктуры: Terraform
 
-Yandex Managed Kubernetes 1.33, три node group (по одной preemptible-ноде 8 vCPU / 16 ГБ HDD в `ru-central1-a`/`b`/`d`), ноды без публичных IP, NAT-шлюз, Headscale VM, Traefik helm CLI (internal NLB), VM Rally в `ru-central1-e` без NAT. Статья — в [README.md](README.md).
+Yandex Managed Kubernetes 1.33, три node group (по одной preemptible-ноде 8 vCPU / 16 ГБ HDD в `ru-central1-a`/`b`/`d`), ноды без публичных IP. Egress приватных подсетей — Headscale VM (NAT instance), не Yandex NAT Gateway. Traefik helm CLI (internal NLB), VM Rally в `ru-central1-e` без публичного IP. Статья — в [README.md](README.md).
 
 Service account: `elastic-chaos-monkey`.
 
 ## Headscale
 
-`headscale-vm.tf`: Ubuntu, 2 vCPU / 4 ГБ, HDD 20 ГиБ, preemptible, зона `a`. Единственный публичный IP стенда — `yandex_vpc_address.ingress`. Headscale **0.29.3**, Tailscale **1.102.4**, subnet router на `10.0.1.0/24`–`10.0.4.0/24`. Cloud-init: [cloud-init/headscale.yaml.tftpl](cloud-init/headscale.yaml.tftpl).
+`headscale-vm.tf`: Ubuntu, 2 vCPU / 4 ГБ, HDD 20 ГиБ, preemptible, зона `a`, подсеть `elastic-chaos-public` (`10.0.0.0/24`) без route table. Единственный публичный IP стенда — `yandex_vpc_address.ingress`. VM — NAT instance: `ip_forward` + MASQUERADE для `10.0.1.0/24`–`10.0.4.0/24`; у этих подсетей `0.0.0.0/0` → internal IP Headscale. Headscale **0.29.3**, Tailscale **1.102.4**, subnet router на те же префиксы. Cloud-init: [cloud-init/headscale.yaml.tftpl](cloud-init/headscale.yaml.tftpl). Preemptible: при прерывании VM нет egress у k8s и Rally.
 
 ## Traefik
 
@@ -25,7 +25,7 @@ Service account: `elastic-chaos-monkey`.
 
 ## Rally VM
 
-`rally-vm.tf`: Ubuntu, 8 vCPU / 16 ГБ, HDD 100 ГиБ, без публичного IP (`nat = false`), зона `e`. Cloud-init ставит `esrally` в venv пользователя `ubuntu`. SSH — внутренний IP после `tailscale up --accept-routes`.
+`rally-vm.tf`: Ubuntu, 8 vCPU / 16 ГБ, HDD 100 ГиБ, без публичного IP (`nat = false`), зона `e`, подсеть `10.0.4.0/24`. Benchmark до ES в `10.0.1/2/3` внутри VPC, без NAT. Исходящий (apt, pip) — через Headscale. SSH — внутренний IP после `tailscale up --accept-routes`.
 
 ## Требования
 
