@@ -18,8 +18,21 @@ write_files:
       FQDN="${headscale_fqdn}"
       PIP="${ingress_ip}"
       sysctl --system
-      curl -fsSL -o /tmp/headscale.deb \
-        "https://github.com/juanfont/headscale/releases/download/v0.29.3/headscale_0.29.3_linux_amd64.deb"
+      ok=0
+      for url in \
+        "https://github.com/juanfont/headscale/releases/download/v0.29.3/headscale_0.29.3_linux_amd64.deb" \
+        "https://downloads.sourceforge.net/project/headscale.mirror/v0.29.3/headscale_0.29.3_linux_amd64.deb"
+      do
+        if curl -fsSL --connect-timeout 30 --max-time 180 -o /tmp/headscale.deb "$url"; then
+          ok=1
+          break
+        fi
+        echo "headscale deb download failed: $url" >&2
+      done
+      if [ "$ok" != 1 ]; then
+        echo "headscale deb download failed from GitHub and SourceForge" >&2
+        exit 1
+      fi
       apt-get install -y /tmp/headscale.deb
       cat > /etc/headscale/config.yaml <<'EOF'
       server_url: https://${headscale_fqdn}

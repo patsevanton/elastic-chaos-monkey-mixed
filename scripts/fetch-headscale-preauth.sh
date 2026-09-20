@@ -8,7 +8,7 @@ ssh_cmd() {
 }
 
 KEY=""
-for i in 1 2 3 4 5 6 7 8 9 10; do
+for i in 1 2 3 4 5; do
   KEY="$(ssh_cmd sudo cat /var/lib/headscale/laptop-preauth.key 2>/dev/null | tr -d '\n' || true)"
   if [ -n "${KEY}" ]; then
     export KEY
@@ -16,7 +16,7 @@ for i in 1 2 3 4 5 6 7 8 9 10; do
     exit 0
   fi
   echo "laptop-preauth.key not ready (attempt ${i}/10)" >&2
-  sleep 30
+  sleep 15
 done
 
 echo "laptop-preauth.key not ready after 10 attempts" >&2
