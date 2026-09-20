@@ -95,9 +95,9 @@ Headscale — координатор и DERP. В `10.0.x` пакеты идут,
 - VMCluster **replicationFactor: 3**, по одному `vmstorage` в `a`/`b`/`d`: **1 vCPU / 2 ГиБ RAM / HDD 30 ГиБ**.
 - В values отключить scrape-job и recording-правила control-plane Yandex Managed K8s (`kubeControllerManager`, `kubeScheduler`, `kubeEtcd`, группы `etcd`, `kubernetes-system-scheduler`, `kubernetes-system-controller-manager`, `kube-scheduler.rules`).
 - Grafana: **3 реплики** в `a`/`b`/`d`, Ingress Traefik, `grafana.<INTERNAL_NLB_IP>.sslip.io`.
-- Traefik: helm CLI, chart **41.6.0**, **3 реплики** в `a`/`b`/`d`. Service LoadBalancer **internal** (аннотации `yandex.cloud/load-balancer-type: internal`, `yandex.cloud/subnet-id` = subnet `a`). Без reserved IP.
+- Traefik: helm CLI, chart **41.6.0**, **3 реплики** в `a`/`b`/`d`. Values Terraform пишет на apply (`local_file.write_traefik_values`) из `traefik-values.yaml.tftpl`: Service LoadBalancer **internal**, `yandex.cloud/subnet-id` = subnet `a`, `loadBalancerIP` = reserved internal IP `yandex_vpc_address.traefik`.
 - `time_sleep.wait_lb_release` остаётся: на destroy кластера CCM должен успеть снять internal NLB Traefik (60 с), как раньше для публичного Ingress.
-- `vmks-values.yaml` Terraform на apply не пишет. После IP internal NLB Traefik — скрипт из `vmks-values.yaml.tftpl`.
+- `vmks-values.yaml` Terraform пишет на apply (`local_file.write_vmks_values`) из `vmks-values.yaml.tftpl`, IP = reserved internal адрес Traefik.
 - `prometheus-community/elasticsearch_exporter`: **3 реплики** в `a`/`b`/`d`.
 - ECK operator и Chaos Mesh controller: **по 3 реплики**.
 - Kibana (ECK): **3 реплики** в `a`/`b`/`d`, Ingress Traefik, `kibana.<INTERNAL_NLB_IP>.sslip.io`. **Basic auth на Ingress нет** — Traefik только из VPC/tailnet. Kibana ходит в ES без пароля. Переменная `kibana_ingress_password` и `htpasswd` не нужны. Stack Monitoring не заменяет Grafana.
@@ -164,7 +164,7 @@ Rally --VPC--> internal NLB Elasticsearch :9200
 
 ## Состав репозитория
 
-Terraform в корне: `versions.tf`, `providers.tf`, `variables.tf`, `locals.tf`, `net.tf`, `k8s.tf`, `ip-dns.tf`, `monitoring.tf`, `vmks-values.yaml.tftpl`, `rally-vm.tf`, `headscale-vm.tf`.
+Terraform в корне: `versions.tf`, `providers.tf`, `variables.tf`, `locals.tf`, `net.tf`, `k8s.tf`, `ip-dns.tf`, `monitoring.tf`, `vmks-values.yaml.tftpl`, `traefik-values.yaml.tftpl`, `rally-vm.tf`, `headscale-vm.tf`.
 
 Cloud-init: `cloud-init/rally.yaml`, `cloud-init/headscale.yaml`.
 
@@ -175,7 +175,7 @@ Cloud-init: `cloud-init/rally.yaml`, `cloud-init/headscale.yaml`.
 - `manifests/exporter/` — elasticsearch_exporter.
 - `manifests/ingress/` — Ingress Kibana без middleware basic auth.
 
-`scripts/` — stop/start ноды группы `b`, сверка bulk vs `_count`, sample mget, render `vmks-values.yaml` по IP Traefik.
+`scripts/` — stop/start ноды группы `b`, сверка bulk vs `_count`, sample mget.
 
 `README.md` — полный текст статьи, H1: **Отказоустойчивость Elasticsearch: Chaos Mesh, потеря зоны и Rally**. Таблицы результатов — плейсхолдеры до прогона.
 

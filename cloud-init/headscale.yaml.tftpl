@@ -1,0 +1,124 @@
+#cloud-config
+package_update: true
+packages:
+  - curl
+  - ca-certificates
+  - python3
+write_files:
+  - path: /etc/sysctl.d/99-tailscale.conf
+    permissions: "0644"
+    content: |
+      net.ipv4.ip_forward=1
+      net.ipv6.conf.all.forwarding=1
+  - path: /usr/local/sbin/headscale-bootstrap.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      FQDN="${headscale_fqdn}"
+      PIP="${ingress_ip}"
+      sysctl --system
+      curl -fsSL -o /tmp/headscale.deb \
+        "https://github.com/juanfont/headscale/releases/download/v0.29.3/headscale_0.29.3_linux_amd64.deb"
+      apt-get install -y /tmp/headscale.deb
+      cat > /etc/headscale/config.yaml <<'EOF'
+      server_url: https://${headscale_fqdn}
+      listen_addr: 0.0.0.0:443
+      metrics_listen_addr: 127.0.0.1:9090
+      grpc_listen_addr: 127.0.0.1:50443
+      grpc_allow_insecure: false
+      noise:
+        private_key_path: /var/lib/headscale/noise_private.key
+      prefixes:
+        v4: 100.64.0.0/10
+        v6: fd7a:115c:a1e0::/48
+        allocation: sequential
+      derp:
+        server:
+          enabled: true
+          region_id: 999
+          region_code: "headscale"
+          region_name: "Headscale Embedded DERP"
+          verify_clients: true
+          stun_listen_addr: "0.0.0.0:3478"
+          private_key_path: /var/lib/headscale/derp_server_private.key
+          automatically_add_embedded_derp_region: true
+          ipv4: ${ingress_ip}
+        urls: []
+        paths: []
+        auto_update_enabled: false
+      database:
+        type: sqlite
+        sqlite:
+          path: /var/lib/headscale/db.sqlite
+          write_ahead_log: true
+      acme_url: https://acme-v02.api.letsencrypt.org/directory
+      tls_letsencrypt_hostname: ${headscale_fqdn}
+      tls_letsencrypt_cache_dir: /var/lib/headscale/cache
+      tls_letsencrypt_challenge_type: HTTP-01
+      tls_letsencrypt_listen: ":80"
+      log:
+        level: info
+        format: text
+      dns:
+        magic_dns: false
+        override_local_dns: false
+        base_domain: elastic-chaos.internal
+        nameservers:
+          global: []
+          split: {}
+        search_domains: []
+        extra_records: []
+      unix_socket: /var/run/headscale/headscale.sock
+      unix_socket_permission: "0770"
+      EOF
+      mkdir -p --mode=0755 /usr/share/keyrings
+      curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg \
+        | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+      curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list \
+        | tee /etc/apt/sources.list.d/tailscale.list
+      apt-get update
+      apt-get install -y tailscale=1.102.4
+      apt-mark hold tailscale
+      systemctl enable --now headscale
+      systemctl enable --now tailscaled
+      ok=0
+      for i in 1 2 3; do
+        if curl -fsS --resolve "$${FQDN}:443:$${PIP}" "https://$${FQDN}/health"; then
+          ok=1
+          break
+        fi
+        sleep 60
+      done
+      if [ "$$ok" != 1 ]; then
+        echo "headscale /health failed after 3 attempts" >&2
+        exit 1
+      fi
+      headscale users create elastic-chaos
+      USER_ID="$$(headscale users list -o json | python3 -c "import json,sys; data=json.load(sys.stdin); users=data if isinstance(data, list) else data.get('users', []); print(next(str(u['id']) for u in users if u.get('name')=='elastic-chaos'))")"
+      ROUTER_KEY="$$(headscale preauthkeys create --user "$$USER_ID" --reusable --expiration 24h -o json | python3 -c "import json,sys; print(json.load(sys.stdin)['key'])")"
+      LAPTOP_KEY="$$(headscale preauthkeys create --user "$$USER_ID" --reusable --expiration 24h -o json | python3 -c "import json,sys; print(json.load(sys.stdin)['key'])")"
+      umask 027
+      printf '%s\n' "$$LAPTOP_KEY" > /var/lib/headscale/laptop-preauth.key
+      chown root:ubuntu /var/lib/headscale/laptop-preauth.key
+      chmod 0640 /var/lib/headscale/laptop-preauth.key
+      tailscale up --login-server="https://$${FQDN}" --authkey="$$ROUTER_KEY" \
+        --advertise-routes=10.0.1.0/24,10.0.2.0/24,10.0.3.0/24,10.0.4.0/24 \
+        --accept-dns=false
+      ok=0
+      for i in 1 2 3; do
+        NODE_ID="$$(headscale nodes list-routes -o json | python3 -c "import json,sys; data=json.load(sys.stdin); nodes=data if isinstance(data, list) else data.get('nodes', []); ids=[str(n['id']) for n in nodes if '10.0.1.0/24' in (n.get('availableRoutes') or n.get('available_routes') or [])]; print(ids[0] if ids else '')")"
+        if [ -n "$${NODE_ID}" ]; then
+          headscale nodes approve-routes --identifier "$$NODE_ID" \
+            --routes 10.0.1.0/24,10.0.2.0/24,10.0.3.0/24,10.0.4.0/24
+          ok=1
+          break
+        fi
+        sleep 60
+      done
+      if [ "$$ok" != 1 ]; then
+        echo "approve-routes failed after 3 attempts" >&2
+        exit 1
+      fi
+runcmd:
+  - [/usr/local/sbin/headscale-bootstrap.sh]

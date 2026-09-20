@@ -43,7 +43,7 @@ resource "yandex_kubernetes_cluster" "elastic_chaos" {
       }
     }
 
-    public_ip = true
+    public_ip = false
   }
 
   service_account_id      = yandex_iam_service_account.elastic_chaos_monkey.id
@@ -51,8 +51,8 @@ resource "yandex_kubernetes_cluster" "elastic_chaos" {
   release_channel         = "STABLE"
 
   # Зависимость от ожидания применения IAM-ролей.
-  # При destroy кластер должен удалиться ДО time_sleep.wait_lb_release (пауза перед освобождением IP),
-  # чтобы cloud-controller-manager успел снять LoadBalancer с адреса yandex_vpc_address.ingress.
+  # При destroy кластер должен удалиться ДО time_sleep.wait_lb_release,
+  # чтобы CCM успел снять internal NLB Traefik (и ES).
   depends_on = [
     time_sleep.wait_sa,
     time_sleep.wait_lb_release,
@@ -180,7 +180,7 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_d" {
 }
 
 output "k8s_cluster_credentials_command" {
-  value = "yc managed-kubernetes cluster get-credentials --id ${yandex_kubernetes_cluster.elastic_chaos.id} --external --force"
+  value = "yc managed-kubernetes cluster get-credentials --id ${yandex_kubernetes_cluster.elastic_chaos.id} --internal --force"
 }
 
 output "k8s_cluster_id" {
@@ -193,7 +193,4 @@ output "nlb_subnet_id" {
   value       = local.subnet_a_id
 }
 
-output "ingress_ip" {
-  description = "Публичный IP Traefik"
-  value       = local.ingress_ip
-}
+

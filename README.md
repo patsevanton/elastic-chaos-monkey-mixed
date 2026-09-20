@@ -19,33 +19,49 @@ Terraform: Managed K8s **1.33**, SA `elastic-chaos-monkey`, три node group п
 | Компонент | Куда |
 |---|---|
 | Elasticsearch 9.5.4 mixed ×3 | по поду в `a` / `b` / `d`, heap 3 ГиБ, RAM 6 ГиБ, CPU 4–6 |
-| Kibana 9.5.4 ×3 | те же зоны, HTTP без TLS, basic auth на Ingress |
+| Kibana 9.5.4 ×3 | те же зоны, HTTP без TLS, Ingress без basic auth |
 | ECK operator 3.5.0 ×3 | `elastic-system` |
 | Chaos Mesh 2.8.4, controller ×3 | `chaos-mesh` |
 | elasticsearch_exporter ×3 | `elastic` |
 | Grafana / Traefik ×3 | `vmks` / `traefik` |
 | VMCluster RF=3 | vmstorage 1 vCPU / 2 ГиБ / HDD 30 ГиБ |
-| Rally VM | `ru-central1-e`, 8 vCPU / 16 ГБ, HDD 100 ГиБ, публичный IP |
+| Rally VM | `ru-central1-e`, 8 vCPU / 16 ГБ, HDD 100 ГиБ, без публичного IP |
+| Headscale VM | `ru-central1-a`, 2 vCPU / 4 ГБ, HDD 20 ГиБ, единственный публичный IP |
 
 Инфра подробно: [INFRASTRUCTURE.md](INFRASTRUCTURE.md).
 
-## Шаг 0. Кластер и vmks
+## Шаг 0. Кластер, Headscale и vmks
 
 ```bash
 terraform init
 terraform apply
-yc managed-kubernetes cluster get-credentials --id $(terraform output -raw k8s_cluster_id) --external --force
+```
+
+Ключ ноутбука и вход в tailnet:
+
+```bash
+terraform output -raw headscale_laptop_preauth
+terraform output -raw headscale_login_command
+tailscale up --login-server=$(terraform output -raw headscale_url) \
+  --auth-key=$(terraform output -raw headscale_laptop_preauth) \
+  --accept-routes
+yc managed-kubernetes cluster get-credentials --id $(terraform output -raw k8s_cluster_id) --internal --force
+chmod +x scripts/*.sh
 ```
 
 ```bash
+helm upgrade --install traefik oci://ghcr.io/traefik/helm/traefik \
+  --namespace traefik --create-namespace \
+  --version 41.6.0 \
+  -f traefik-values.yaml
 helm upgrade --install vmks \
     oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack \
     --namespace vmks --create-namespace \
-    --wait --version 0.90.2 --timeout 15m \
+    --wait --version 0.93.0 --timeout 15m \
     -f vmks-values.yaml
 ```
 
-Grafana: `terraform output grafana_url`. Пароль:
+Grafana и Kibana: `terraform output grafana_url` / `kibana_url`. Пароль Grafana:
 
 ```bash
 kubectl -n vmks get secret vmks-grafana -o jsonpath='{.data.admin-password}' | base64 --decode; echo
@@ -62,13 +78,11 @@ helm upgrade --install elastic-operator elastic/eck-operator \
 ```
 
 ```bash
-export KIBANA_INGRESS_PASSWORD='...'
-chmod +x scripts/*.sh
 ./scripts/apply-eck.sh
 kubectl apply -f manifests/exporter/elasticsearch-exporter.yaml
 ```
 
-Internal NLB: `kubectl -n elastic get svc chaos-es-http`. Kibana: `terraform output kibana_url`, Ingress basic auth (`kibana` / `KIBANA_INGRESS_PASSWORD`). Если Kibana показывает свой логин — пользователь `elastic`, пароль:
+Internal NLB: `kubectl -n elastic get svc chaos-es-http`. Kibana — Ingress без basic auth. Если Kibana показывает свой логин — пользователь `elastic`, пароль:
 
 ```bash
 kubectl -n elastic get secret chaos-es-elastic-user -o jsonpath='{.data.elastic}' | base64 -d; echo
@@ -98,7 +112,7 @@ helm upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
 
 ## Шаг 3. Ingest nyc_taxis, затем mixed
 
-SSH на Rally (`terraform output rally_public_ip`). ES:
+SSH на Rally (`terraform output -raw rally_internal_ip`) после `tailscale up --accept-routes`. ES:
 
 ```bash
 export ES_URL=http://$(kubectl -n elastic get svc chaos-es-http -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):9200

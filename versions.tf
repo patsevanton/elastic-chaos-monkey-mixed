@@ -8,9 +8,9 @@ terraform {
       source  = "hashicorp/time"
       version = "0.14.0"
     }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 3.0"
+    external = {
+      source  = "hashicorp/external"
+      version = "~> 2.3"
     }
     local = {
       source  = "hashicorp/local"

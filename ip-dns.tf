@@ -5,15 +5,22 @@ resource "yandex_vpc_address" "ingress" {
   }
 }
 
-# Пауза перед удалением публичного IP-адреса при terraform destroy.
-# LoadBalancer, создаваемый cloud-controller-manager через Service Traefik,
-# освобождает адрес не мгновенно после удаления кластера/helm-релиза — без паузы
-# yandex_vpc_address.ingress падает с ошибкой "Address in use".
-# Порядок destroy: helm_release -> cluster -> time_sleep (пауза) -> yandex_vpc_address.ingress.
+resource "yandex_vpc_address" "traefik" {
+  name = "elastic-chaos-traefik-internal"
+  internal_ipv4_address {
+    subnet_id = yandex_vpc_subnet.elastic_chaos_a.id
+  }
+}
+
+# Пауза при terraform destroy после удаления кластера.
+# CCM должен успеть снять internal NLB Traefik (и ES), иначе сеть/подсети
+# и reserved internal IP удаляются слишком рано.
+# Порядок destroy: cluster -> time_sleep (пауза) -> адреса.
 resource "time_sleep" "wait_lb_release" {
   destroy_duration = "60s"
 
   depends_on = [
     yandex_vpc_address.ingress,
+    yandex_vpc_address.traefik,
   ]
 }

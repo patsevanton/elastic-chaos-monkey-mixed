@@ -19,18 +19,13 @@ resource "yandex_compute_instance" "rally" {
 
   network_interface {
     subnet_id = local.subnet_e_id
-    nat       = true
+    nat       = false
   }
 
   metadata = {
     ssh-keys  = "ubuntu:${file("~/.ssh/id_ed25519.pub")}"
     user-data = file("${path.module}/cloud-init/rally.yaml")
   }
-}
-
-output "rally_public_ip" {
-  description = "Публичный IP VM esrally (SSH)"
-  value       = yandex_compute_instance.rally.network_interface[0].nat_ip_address
 }
 
 output "rally_internal_ip" {

@@ -6,7 +6,7 @@ grafana:
     annotations:
       traefik.ingress.kubernetes.io/router.entrypoints: web
     hosts:
-      - grafana.${ingress_public_ip}.sslip.io
+      - grafana.${ingress_ip}.sslip.io
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: topology.kubernetes.io/zone

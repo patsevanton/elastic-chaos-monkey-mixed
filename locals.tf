@@ -11,7 +11,7 @@ locals {
   subnet_d_zone = yandex_vpc_subnet.elastic_chaos_d.zone
   subnet_e_zone = yandex_vpc_subnet.elastic_chaos_e.zone
 
-  ingress_ip   = yandex_vpc_address.ingress.external_ipv4_address[0].address
-  grafana_fqdn = "grafana.${local.ingress_ip}.sslip.io"
-  kibana_fqdn  = "kibana.${local.ingress_ip}.sslip.io"
+  ingress_ip     = yandex_vpc_address.ingress.external_ipv4_address[0].address
+  traefik_ip     = yandex_vpc_address.traefik.internal_ipv4_address[0].address
+  headscale_fqdn = "headscale.${local.ingress_ip}.sslip.io"
 }
