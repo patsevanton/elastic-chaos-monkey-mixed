@@ -22,14 +22,14 @@ write_files:
       FQDN="${headscale_fqdn}"
       PIP="${ingress_ip}"
       sysctl --system
-      IFACE="$$(ip -o -4 route show default | awk '{print $$5; exit}')"
+      IFACE="$(ip -o -4 route show default | awk '{print $5; exit}')"
       if [ -z "$${IFACE}" ]; then
         echo "no default-route iface for MASQUERADE" >&2
         exit 1
       fi
       for cidr in 10.0.1.0/24 10.0.2.0/24 10.0.3.0/24 10.0.4.0/24; do
-        iptables -t nat -C POSTROUTING -s "$$cidr" -o "$$IFACE" -j MASQUERADE 2>/dev/null || \
-          iptables -t nat -A POSTROUTING -s "$$cidr" -o "$$IFACE" -j MASQUERADE
+        iptables -t nat -C POSTROUTING -s "$cidr" -o "$IFACE" -j MASQUERADE 2>/dev/null || \
+          iptables -t nat -A POSTROUTING -s "$cidr" -o "$IFACE" -j MASQUERADE
       done
       mkdir -p /etc/iptables
       iptables-save > /etc/iptables/rules.v4
@@ -99,42 +99,42 @@ write_files:
       systemctl restart headscale
       systemctl enable --now tailscaled
       headscale users create elastic-chaos
-      USER_ID="$$(headscale users list -o json | python3 -c "import json,sys; data=json.load(sys.stdin); users=data if isinstance(data, list) else data.get('users', []); print(next(str(u['id']) for u in users if u.get('name')=='elastic-chaos'))")"
-      ROUTER_KEY="$$(headscale preauthkeys create --user "$$USER_ID" --reusable --expiration 24h -o json | python3 -c "import json,sys; print(json.load(sys.stdin)['key'])")"
-      LAPTOP_KEY="$$(headscale preauthkeys create --user "$$USER_ID" --reusable --expiration 24h -o json | python3 -c "import json,sys; print(json.load(sys.stdin)['key'])")"
+      USER_ID="$(headscale users list -o json | python3 -c "import json,sys; data=json.load(sys.stdin); users=data if isinstance(data, list) else data.get('users', []); print(next(str(u['id']) for u in users if u.get('name')=='elastic-chaos'))")"
+      ROUTER_KEY="$(headscale preauthkeys create --user "$USER_ID" --reusable --expiration 24h -o json | python3 -c "import json,sys; print(json.load(sys.stdin)['key'])")"
+      LAPTOP_KEY="$(headscale preauthkeys create --user "$USER_ID" --reusable --expiration 24h -o json | python3 -c "import json,sys; print(json.load(sys.stdin)['key'])")"
       umask 027
-      printf '%s\n' "$$LAPTOP_KEY" > /var/lib/headscale/laptop-preauth.key
+      printf '%s\n' "$LAPTOP_KEY" > /var/lib/headscale/laptop-preauth.key
       chown root:ubuntu /var/lib/headscale/laptop-preauth.key
       chmod 0640 /var/lib/headscale/laptop-preauth.key
       ok=0
       for i in 1 2 3; do
-        body="$$(curl -fsS --resolve "$${FQDN}:443:$${PIP}" "https://$${FQDN}/health" || true)"
-        if printf '%s' "$$body" | grep -q pass; then
+        body="$(curl -fsS --resolve "$${FQDN}:443:$${PIP}" "https://$${FQDN}/health" || true)"
+        if printf '%s' "$body" | grep -q pass; then
           ok=1
           break
         fi
         echo "headscale /health attempt $${i}: $${body:-curl failed}" >&2
         sleep 60
       done
-      if [ "$$ok" != 1 ]; then
+      if [ "$ok" != 1 ]; then
         echo "headscale /health failed after 3 attempts" >&2
         exit 1
       fi
-      tailscale up --login-server="https://$${FQDN}" --authkey="$$ROUTER_KEY" \
+      tailscale up --login-server="https://$${FQDN}" --authkey="$ROUTER_KEY" \
         --advertise-routes=10.0.1.0/24,10.0.2.0/24,10.0.3.0/24,10.0.4.0/24 \
         --accept-dns=false
       ok=0
       for i in 1 2 3; do
-        NODE_ID="$$(headscale nodes list-routes -o json | python3 -c "import json,sys; data=json.load(sys.stdin); nodes=data if isinstance(data, list) else data.get('nodes', []); ids=[str(n['id']) for n in nodes if '10.0.1.0/24' in (n.get('availableRoutes') or n.get('available_routes') or [])]; print(ids[0] if ids else '')")"
+        NODE_ID="$(headscale nodes list-routes -o json | python3 -c "import json,sys; data=json.load(sys.stdin); nodes=data if isinstance(data, list) else data.get('nodes', []); ids=[str(n['id']) for n in nodes if '10.0.1.0/24' in (n.get('availableRoutes') or n.get('available_routes') or [])]; print(ids[0] if ids else '')")"
         if [ -n "$${NODE_ID}" ]; then
-          headscale nodes approve-routes --identifier "$$NODE_ID" \
+          headscale nodes approve-routes --identifier "$NODE_ID" \
             --routes 10.0.1.0/24,10.0.2.0/24,10.0.3.0/24,10.0.4.0/24
           ok=1
           break
         fi
         sleep 60
       done
-      if [ "$$ok" != 1 ]; then
+      if [ "$ok" != 1 ]; then
         echo "approve-routes failed after 3 attempts" >&2
         exit 1
       fi
