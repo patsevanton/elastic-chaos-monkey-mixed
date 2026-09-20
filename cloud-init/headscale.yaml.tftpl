@@ -83,18 +83,6 @@ write_files:
       systemctl enable --now headscale
       systemctl restart headscale
       systemctl enable --now tailscaled
-      ok=0
-      for i in 1 2 3; do
-        if curl -fsS --resolve "$${FQDN}:443:$${PIP}" "https://$${FQDN}/health"; then
-          ok=1
-          break
-        fi
-        sleep 60
-      done
-      if [ "$$ok" != 1 ]; then
-        echo "headscale /health failed after 3 attempts" >&2
-        exit 1
-      fi
       headscale users create elastic-chaos
       USER_ID="$$(headscale users list -o json | python3 -c "import json,sys; data=json.load(sys.stdin); users=data if isinstance(data, list) else data.get('users', []); print(next(str(u['id']) for u in users if u.get('name')=='elastic-chaos'))")"
       ROUTER_KEY="$$(headscale preauthkeys create --user "$$USER_ID" --reusable --expiration 24h -o json | python3 -c "import json,sys; print(json.load(sys.stdin)['key'])")"
@@ -103,6 +91,20 @@ write_files:
       printf '%s\n' "$$LAPTOP_KEY" > /var/lib/headscale/laptop-preauth.key
       chown root:ubuntu /var/lib/headscale/laptop-preauth.key
       chmod 0640 /var/lib/headscale/laptop-preauth.key
+      ok=0
+      for i in 1 2 3; do
+        body="$$(curl -fsS --resolve "$${FQDN}:443:$${PIP}" "https://$${FQDN}/health" || true)"
+        if printf '%s' "$$body" | grep -q pass; then
+          ok=1
+          break
+        fi
+        echo "headscale /health attempt $${i}: $${body:-curl failed}" >&2
+        sleep 60
+      done
+      if [ "$$ok" != 1 ]; then
+        echo "headscale /health failed after 3 attempts" >&2
+        exit 1
+      fi
       tailscale up --login-server="https://$${FQDN}" --authkey="$$ROUTER_KEY" \
         --advertise-routes=10.0.1.0/24,10.0.2.0/24,10.0.3.0/24,10.0.4.0/24 \
         --accept-dns=false
