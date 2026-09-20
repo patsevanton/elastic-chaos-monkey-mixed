@@ -1,4 +1,3 @@
-/*
 resource "yandex_compute_instance" "rally" {
   name                      = "elastic-chaos-rally"
   platform_id               = "standard-v3"
@@ -33,4 +32,3 @@ output "rally_internal_ip" {
   description = "Внутренний IP VM esrally"
   value       = yandex_compute_instance.rally.network_interface[0].ip_address
 }
-*/

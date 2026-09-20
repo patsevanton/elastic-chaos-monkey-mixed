@@ -83,7 +83,7 @@ output "headscale_url" {
 
 output "headscale_login_command" {
   description = "Команда tailscale up для ноутбука (с preauth-ключом)"
-  value       = "sudo tailscale up --login-server=https://${local.headscale_fqdn} --auth-key=$(terraform output -raw headscale_laptop_preauth) --accept-routes"
+  value       = "sudo tailscale up --login-server=https://${local.headscale_fqdn} --auth-key=$(terraform output -raw headscale_laptop_preauth) --accept-routes --force-reauth"
 }
 
 output "headscale_laptop_preauth" {
