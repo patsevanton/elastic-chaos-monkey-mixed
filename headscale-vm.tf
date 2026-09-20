@@ -48,6 +48,16 @@ resource "yandex_compute_instance" "headscale" {
   }
 }
 
+data "external" "headscale_service_ready" {
+  program = ["bash", "${path.module}/scripts/wait-headscale-ready.sh"]
+
+  query = {
+    ip = yandex_compute_instance.headscale.network_interface[0].nat_ip_address
+  }
+
+  depends_on = [yandex_compute_instance.headscale]
+}
+
 data "external" "headscale_laptop_preauth" {
   program = ["bash", "${path.module}/scripts/fetch-headscale-preauth.sh"]
 
@@ -55,7 +65,10 @@ data "external" "headscale_laptop_preauth" {
     ip = yandex_compute_instance.headscale.network_interface[0].nat_ip_address
   }
 
-  depends_on = [yandex_compute_instance.headscale]
+  depends_on = [
+    yandex_compute_instance.headscale,
+    data.external.headscale_service_ready,
+  ]
 }
 
 output "headscale_public_ip" {

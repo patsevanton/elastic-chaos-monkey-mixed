@@ -8,7 +8,7 @@ ssh_cmd() {
 }
 
 KEY=""
-for i in $(seq 1 20); do
+for i in $(seq 1 60); do
   KEY="$(ssh_cmd sudo cat /var/lib/headscale/laptop-preauth.key 2>/dev/null | tr -d '\n' || true)"
   if [ -n "${KEY}" ]; then
     export KEY
@@ -20,11 +20,11 @@ for i in $(seq 1 20); do
     echo "cloud-init finished (${STATUS}) but laptop-preauth.key is absent" >&2
     exit 1
   fi
-  echo "laptop-preauth.key not ready (attempt ${i}/20)" >&2
+  echo "laptop-preauth.key not ready (attempt ${i}/60)" >&2
   sleep 15
 done
 
-echo "laptop-preauth.key not ready after 20 attempts" >&2
+echo "laptop-preauth.key not ready after 60 attempts" >&2
 echo "--- cloud-init status ---" >&2
 ssh_cmd cloud-init status >&2 || true
 echo "--- /var/log/cloud-init-output.log (tail) ---" >&2
