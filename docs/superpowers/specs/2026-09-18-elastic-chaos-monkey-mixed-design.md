@@ -91,7 +91,7 @@ Headscale — координатор и DERP. В `10.0.x` пакеты идут,
 
 ### Наблюдение
 
-- `victoria-metrics-k8s-stack` **0.93.0** в namespace **`vmks`**, helm CLI.
+- `victoria-metrics-k8s-stack` **0.92.1** в namespace **`vmks`**, helm CLI.
 - VMCluster **replicationFactor: 3**, по одному `vmstorage` в `a`/`b`/`d`: **1 vCPU / 2 ГиБ RAM / HDD 30 ГиБ**.
 - В values отключить scrape-job и recording-правила control-plane Yandex Managed K8s (`kubeControllerManager`, `kubeScheduler`, `kubeEtcd`, группы `etcd`, `kubernetes-system-scheduler`, `kubernetes-system-controller-manager`, `kube-scheduler.rules`).
 - Grafana: **3 реплики** в `a`/`b`/`d`, Ingress Traefik, `grafana.<INTERNAL_NLB_IP>.sslip.io`.
@@ -140,7 +140,7 @@ Rally --VPC--> internal NLB Elasticsearch :9200
 4. `yc managed-kubernetes cluster get-credentials --id $(terraform output -raw k8s_cluster_id) --internal --force`.
 5. Helm Traefik 41.6.0 → IP internal NLB.
 6. Скрипт render `vmks-values.yaml` и подстановка IP в Ingress Kibana.
-7. Helm vmks **0.93.0**.
+7. Helm vmks **0.92.1**.
 8. Дальше README: ECK, Chaos Mesh, Rally; SSH на Rally — внутренний IP.
 
 ## Проверка потери данных (после каждого слота)

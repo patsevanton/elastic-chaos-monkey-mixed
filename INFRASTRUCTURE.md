@@ -21,7 +21,7 @@ Service account: `elastic-chaos-monkey`.
 - vmalert и alertmanager выключены
 - scrape-job и recording-правила control-plane Yandex Managed K8s выключены
 
-Стек ставится helm CLI **0.93.0** — команда в [README.md](README.md).
+Стек ставится helm CLI **0.92.1** — команда в [README.md](README.md).
 
 ## Rally VM
 

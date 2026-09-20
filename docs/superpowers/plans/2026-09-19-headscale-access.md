@@ -6,7 +6,7 @@
 
 **Architecture:** Headscale 0.29.3 на preemptible VM в `ru-central1-a` (встроенный ACME, embedded DERP) + `tailscaled` subnet router на `10.0.1.0/24`–`10.0.4.0/24`. k8s `public_ip = false`, Rally `nat = false`, Traefik/vmks — helm CLI после `tailscale up`. Reserved IP и `wait_lb_release` переиспользуются.
 
-**Tech stack:** Terraform (yandex, time), cloud-init, Headscale 0.29.3, Tailscale ≥ 1.80.0, Helm Traefik 41.6.0, victoria-metrics-k8s-stack 0.93.0.
+**Tech stack:** Terraform (yandex, time), cloud-init, Headscale 0.29.3, Tailscale ≥ 1.80.0, Helm Traefik 41.6.0, victoria-metrics-k8s-stack 0.92.1.
 
 **Spec:** [docs/superpowers/specs/2026-09-18-elastic-chaos-monkey-mixed-design.md](../specs/2026-09-18-elastic-chaos-monkey-mixed-design.md)
 
@@ -103,9 +103,9 @@
 
 **Files:** `README.md`, `INFRASTRUCTURE.md`, `AGENTS.md`
 
-- [ ] README шаг 0: apply → SSH за ключом → `tailscale up --login-server=https://headscale.<PIP>.sslip.io --auth-key=... --accept-routes` → `yc ... --internal --force` → `./scripts/install-traefik.sh` → `./scripts/render-vmks-values.sh` → helm vmks **0.93.0**. Grafana/Kibana URL из internal IP. SSH Rally на `rally_internal_ip`. Убрать htpasswd, публичный Rally, `--external`, Traefik из apply.
-- [ ] INFRASTRUCTURE.md: Headscale VM, единственный публичный IP, Traefik helm CLI internal, vmks 0.93.0, Rally без NAT.
-- [ ] AGENTS.md: `--version 0.93.0`.
+- [ ] README шаг 0: apply → SSH за ключом → `tailscale up --login-server=https://headscale.<PIP>.sslip.io --auth-key=... --accept-routes` → `yc ... --internal --force` → `./scripts/install-traefik.sh` → `./scripts/render-vmks-values.sh` → helm vmks **0.92.1**. Grafana/Kibana URL из internal IP. SSH Rally на `rally_internal_ip`. Убрать htpasswd, публичный Rally, `--external`, Traefik из apply.
+- [ ] INFRASTRUCTURE.md: Headscale VM, единственный публичный IP, Traefik helm CLI internal, vmks 0.92.1, Rally без NAT.
+- [ ] AGENTS.md: `--version 0.92.1`.
 
 ---
 
@@ -113,7 +113,7 @@
 
 - [ ] `terraform fmt -check` / `terraform validate` (нужен `terraform init` после удаления helm).
 - [ ] Гrep: нет `--external`, `helm_release`, `kibana_ingress_password`, `basicAuth`, `nat = true` у Rally, `public_ip = true`.
-- [ ] Гrep: есть `public_ip = false`, Headscale 0.29.3, Traefik 41.6.0, vmks 0.93.0, `wait_lb_release`, `yandex_vpc_address.ingress` на Headscale VM.
+- [ ] Гrep: есть `public_ip = false`, Headscale 0.29.3, Traefik 41.6.0, vmks 0.92.1, `wait_lb_release`, `yandex_vpc_address.ingress` на Headscale VM.
 - [ ] Ручной прогон после merge — по README, не в этом плане.
 
 ---
