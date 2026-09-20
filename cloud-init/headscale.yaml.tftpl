@@ -81,6 +81,7 @@ write_files:
       apt-get install -y tailscale=1.102.4
       apt-mark hold tailscale
       systemctl enable --now headscale
+      systemctl restart headscale
       systemctl enable --now tailscaled
       ok=0
       for i in 1 2 3; do
