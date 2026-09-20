@@ -11,6 +11,13 @@ resource "yandex_vpc_subnet" "elastic_chaos_public" {
   network_id     = yandex_vpc_network.elastic_chaos.id
 }
 
+resource "yandex_vpc_gateway" "nat" {
+  folder_id = local.folder_id
+  name      = "elastic-chaos-nat"
+
+  shared_egress_gateway {}
+}
+
 resource "yandex_vpc_route_table" "rt" {
   folder_id  = local.folder_id
   name       = "elastic-chaos-rt-nat"
@@ -18,7 +25,7 @@ resource "yandex_vpc_route_table" "rt" {
 
   static_route {
     destination_prefix = "0.0.0.0/0"
-    next_hop_address   = yandex_compute_instance.headscale.network_interface[0].ip_address
+    gateway_id         = yandex_vpc_gateway.nat.id
   }
 }
 

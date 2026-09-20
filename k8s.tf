@@ -9,6 +9,7 @@ resource "yandex_resourcemanager_folder_iam_member" "elastic_chaos_monkey_editor
   member    = "serviceAccount:${yandex_iam_service_account.elastic_chaos_monkey.id}"
 }
 
+/*
 resource "time_sleep" "wait_sa" {
   create_duration = "20s"
   depends_on = [
@@ -192,5 +193,6 @@ output "nlb_subnet_id" {
   description = "Подсеть для internal NLB Elasticsearch"
   value       = local.subnet_a_id
 }
+*/
 
 
