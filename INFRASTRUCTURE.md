@@ -25,7 +25,7 @@ Service account: `elastic-chaos-monkey`.
 
 ## Rally VM
 
-`rally-vm.tf`: Ubuntu, 8 vCPU / 16 ГБ, HDD 100 ГиБ, без публичного IP (`nat = false`), зона `e`, подсеть `10.0.4.0/24`. Benchmark до ES в `10.0.1/2/3` внутри VPC, без NAT. Исходящий (apt, pip) — NAT Gateway. SSH — внутренний IP после `tailscale up --accept-routes`.
+`rally-vm.tf`: Ubuntu, 8 vCPU / 16 ГБ, SSD 150 ГиБ, без публичного IP (`nat = false`), зона `e`, подсеть `10.0.4.0/24`. Benchmark до ES в `10.0.1/2/3` внутри VPC, без NAT. Исходящий (apt, pip) — NAT Gateway. SSH — внутренний IP после `tailscale up --accept-routes`.
 
 ## Требования
 

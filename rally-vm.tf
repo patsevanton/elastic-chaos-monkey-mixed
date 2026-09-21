@@ -12,8 +12,8 @@ resource "yandex_compute_instance" "rally" {
   boot_disk {
     initialize_params {
       image_id = "fd806c8slu9j1pa87msc"
-      size     = 100
-      type     = "network-hdd"
+      size     = 150
+      type     = "network-ssd"
     }
   }
 
