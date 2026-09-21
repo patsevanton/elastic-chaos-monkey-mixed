@@ -47,8 +47,5 @@ terraform.rc
 vmks-values.yaml
 traefik-values.yaml
 
-# Deb-пакеты, копируемые с ноутбука на VM (не пушим бинарь)
 *.deb
-
-# Данные трека Rally, копируемые с ноутбука на Rally VM
 documents.json.bz2

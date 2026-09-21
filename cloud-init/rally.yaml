@@ -7,7 +7,8 @@ packages:
   - jq
   - curl
 runcmd:
-  - mkdir -p /home/ubuntu/id-log /home/ubuntu/.rally
+  - mkdir -p /home/ubuntu/id-log /home/ubuntu/.rally/benchmarks/data/nyc_taxis
+  - curl -fL --retry 5 --retry-delay 5 -o /home/ubuntu/.rally/benchmarks/data/nyc_taxis/documents.json.bz2 https://storage.yandexcloud.net/download-resources-for-apatsev/documents.json.bz2
   - chown -R ubuntu:ubuntu /home/ubuntu/id-log /home/ubuntu/.rally
   - sudo -u ubuntu python3 -m venv /home/ubuntu/venv
   - sudo -u ubuntu /home/ubuntu/venv/bin/pip install --upgrade pip esrally
