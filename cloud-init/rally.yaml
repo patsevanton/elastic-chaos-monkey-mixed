@@ -6,6 +6,7 @@ packages:
   - python3-venv
   - jq
   - curl
+  - pbzip2
 runcmd:
   - mkdir -p /home/ubuntu/id-log /home/ubuntu/.rally/benchmarks/data/nyc_taxis
   - curl -fL --retry 5 --retry-delay 5 -o /home/ubuntu/.rally/benchmarks/data/nyc_taxis/documents.json.bz2 https://storage.yandexcloud.net/download-resources-for-apatsev/documents.json.bz2
