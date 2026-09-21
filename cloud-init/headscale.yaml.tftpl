@@ -72,13 +72,9 @@ write_files:
       unix_socket: /var/run/headscale/headscale.sock
       unix_socket_permission: "0770"
       EOF
-      mkdir -p --mode=0755 /usr/share/keyrings
-      curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.noarmor.gpg \
-        | tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
-      curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/jammy.tailscale-keyring.list \
-        | tee /etc/apt/sources.list.d/tailscale.list
-      apt-get update
-      apt-get install -y tailscale=1.102.4
+      curl -fL --retry 5 --retry-delay 5 -o /tmp/tailscale.deb \
+        https://storage.yandexcloud.net/download-resources-for-apatsev/tailscale_1.102.4_amd64.deb
+      apt-get install -y /tmp/tailscale.deb
       apt-mark hold tailscale
       systemctl enable --now headscale
       systemctl restart headscale
