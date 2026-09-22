@@ -1,6 +1,6 @@
 # Отказоустойчивость Elasticsearch: Chaos Mesh, потеря зоны и Rally
 
-Кластер Elasticsearch из трёх mixed-нод в трёх зонах Yandex Cloud должен переживать убийство пода, деградацию сети и отвал целой AZ — при живой индексации и поиске, без потери уже принятых документов. В этой статье — стенд на ECK, нагрузка Elastic Rally (`nyc_taxis`), Chaos Mesh и `yc compute instance stop` зоны `ru-central1-b`.
+Кластер Elasticsearch из трёх mixed-нод в трёх зонах Yandex Cloud должен переживать убийство пода, деградацию сети и отвал целой AZ — при живой индексации и поиске, без потери уже принятых документов. В этой статье — стенд на ECK, нагрузка Elastic Rally (`geoshape`), Chaos Mesh и `yc compute instance stop` зоны `ru-central1-b`.
 
 Критерии: search жив, index жив, нет потери документов, которые bulk принял до сбоя. Порога «жив / не жив» нет: в таблицы печатаем процент ошибок Rally.
 
@@ -110,7 +110,7 @@ helm upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
   --set controllerManager.replicaCount=3
 ```
 
-## Шаг 3. Ingest nyc_taxis, затем mixed
+## Шаг 3. Ingest geoshape, затем mixed
 
 SSH на Rally (`terraform output -raw rally_internal_ip`) после `tailscale up --accept-routes`. ES:
 
@@ -120,17 +120,17 @@ export ES_URL=http://$(kubectl -n elastic get svc chaos-es-http -o jsonpath='{.s
 
 (IP NLB с ноутбука через kubectl; на VM подставьте тот же адрес.)
 
-Индекс: 1 primary, 2 replica. У трека `nyc_taxis` это задаётся challenge/track-params:
+Индексы: `osmlinestrings`, `osmmultilinestrings`, `osmpolygons`. 1 primary, 2 replica — challenge/track-params. Challenge `append-no-conflicts-big` (полный корпус ~60.5M / ~45 ГиБ):
 
 ```bash
 source ~/venv/bin/activate
-esrally race --track=nyc_taxis --pipeline=benchmark-only \
+esrally race --track=geoshape --pipeline=benchmark-only \
   --target-hosts="${ES_URL#http://}" \
   --track-params='number_of_shards:1,number_of_replicas:2' \
-  --challenge=append-no-conflicts
+  --challenge=append-no-conflicts-big
 ```
 
-После ingest: `scripts/check-count.sh`. Дальше 4–6 часов mixed bulk+search (свой schedule поверх залитого индекса; id успешных bulk — в `~/id-log/bulk-ids.txt`). Нагрузку не останавливаем на время хаоса.
+После ingest: `scripts/check-count.sh`. Дальше 4–6 часов mixed bulk+search (свой schedule поверх залитых индексов; id успешных bulk — в `~/id-log/bulk-ids.txt`). Нагрузку не останавливаем на время хаоса.
 
 ## Три опыта (~30–40 мин каждый)
 

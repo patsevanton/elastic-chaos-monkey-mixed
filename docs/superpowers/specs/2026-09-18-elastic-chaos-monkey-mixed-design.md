@@ -86,7 +86,7 @@ Headscale — координатор и DERP. В `10.0.x` пакеты идут,
 - Исходящий трафик (apt, pip, esrally) — NAT Gateway и route table подсети `e`.
 - SSH — внутренний IP после `tailscale up --accept-routes`.
 - Cloud-init: esrally, каталог id-лога успешных bulk.
-- Трек: **nyc_taxis**. Сначала полный ingest, затем **4–6 часов** непрерывный mixed bulk+search.
+- Трек: **geoshape**, challenge **append-no-conflicts-big**. Сначала полный ingest, затем **4–6 часов** непрерывный mixed bulk+search.
 - Зону `e` в экспериментах не стопаем.
 
 ### Наблюдение
@@ -122,7 +122,7 @@ Headscale — координатор и DERP. В `10.0.x` пакеты идут,
   → internal API master (kubectl)
   → internal NLB Traefik (Grafana, Kibana)
   → Rally 10.0.4.x:22
-Rally --NAT Gateway--> интернет (пакеты, трек nyc_taxis)
+Rally --NAT Gateway--> интернет (пакеты, трек geoshape)
 Rally --VPC--> internal NLB Elasticsearch :9200
 ```
 
@@ -183,7 +183,7 @@ Cloud-init: `cloud-init/rally.yaml`, `cloud-init/headscale.yaml`.
 
 После apply и join в tailnet: `https://headscale.<PIP>.sslip.io/health`; `tailscale status`; три ноды `a/b/d`; ES 3 пода, health green, шарды по зонам; Kibana и Grafana по `*.<internal-nlb>.sslip.io` без Ingress basic auth; SSH на Rally по внутреннему IP; Rally достукивается до NLB `:9200` без TLS/пароля.
 
-Нагрузка: ingest `nyc_taxis` завершается; `_count` согласован с треком; mixed стартует, id-лог пишется.
+Нагрузка: ingest `geoshape` завершается; `_count` согласован с треком; mixed стартует, id-лог пишется.
 
 Опыты — ручной прогон, не CI.
 
