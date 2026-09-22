@@ -1,5 +1,5 @@
 grafana:
-  replicas: 3
+  replicas: 1
   ingress:
     enabled: true
     ingressClassName: traefik
@@ -7,13 +7,6 @@ grafana:
       traefik.ingress.kubernetes.io/router.entrypoints: web
     hosts:
       - grafana.${ingress_ip}.sslip.io
-  topologySpreadConstraints:
-    - maxSkew: 1
-      topologyKey: topology.kubernetes.io/zone
-      whenUnsatisfiable: DoNotSchedule
-      labelSelector:
-        matchLabels:
-          app.kubernetes.io/name: grafana
 
 defaultDatasources:
   victoriametrics:

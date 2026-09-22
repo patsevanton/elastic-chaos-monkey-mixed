@@ -16,7 +16,7 @@ Service account: `elastic-chaos-monkey`.
 
 На apply Terraform пишет [vmks-values.yaml](vmks-values.yaml) из [vmks-values.yaml.tftpl](vmks-values.yaml.tftpl) (`vmks-values.yaml` в `.gitignore`), host Grafana — reserved internal IP Traefik:
 
-- Grafana 3 реплики, Ingress Traefik, `grafana.<INTERNAL_NLB_IP>.sslip.io`
+- Grafana 1 реплика, Ingress Traefik, `grafana.<INTERNAL_NLB_IP>.sslip.io`
 - VMCluster RF=3, vmstorage 1 vCPU / 2 ГиБ / HDD 30 ГиБ
 - vmalert и alertmanager выключены
 - scrape-job и recording-правила control-plane Yandex Managed K8s выключены
