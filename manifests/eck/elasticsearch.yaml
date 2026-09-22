@@ -41,14 +41,14 @@ spec:
             - name: elasticsearch
               env:
                 - name: ES_JAVA_OPTS
-                  value: -Xms3g -Xmx3g
+                  value: -Xms6g -Xmx6g
               resources:
                 requests:
                   cpu: "4"
-                  memory: 6Gi
+                  memory: 10Gi
                 limits:
                   cpu: "6"
-                  memory: 6Gi
+                  memory: 10Gi
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
@@ -58,7 +58,7 @@ spec:
             storageClassName: yc-network-ssd
             resources:
               requests:
-                storage: 100Gi
+                storage: 200Gi
     - name: zone-b
       count: 1
       config:
@@ -83,14 +83,14 @@ spec:
             - name: elasticsearch
               env:
                 - name: ES_JAVA_OPTS
-                  value: -Xms3g -Xmx3g
+                  value: -Xms6g -Xmx6g
               resources:
                 requests:
                   cpu: "4"
-                  memory: 6Gi
+                  memory: 10Gi
                 limits:
                   cpu: "6"
-                  memory: 6Gi
+                  memory: 10Gi
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
@@ -100,7 +100,7 @@ spec:
             storageClassName: yc-network-ssd
             resources:
               requests:
-                storage: 100Gi
+                storage: 200Gi
     - name: zone-d
       count: 1
       config:
@@ -125,14 +125,14 @@ spec:
             - name: elasticsearch
               env:
                 - name: ES_JAVA_OPTS
-                  value: -Xms3g -Xmx3g
+                  value: -Xms6g -Xmx6g
               resources:
                 requests:
                   cpu: "4"
-                  memory: 6Gi
+                  memory: 10Gi
                 limits:
                   cpu: "6"
-                  memory: 6Gi
+                  memory: 10Gi
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
@@ -142,4 +142,4 @@ spec:
             storageClassName: yc-network-ssd
             resources:
               requests:
-                storage: 100Gi
+                storage: 200Gi
