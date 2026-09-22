@@ -50,14 +50,63 @@ write_files:
 
       [distributions]
       release.cache = true
+  - path: /usr/local/bin/fetch-rally-corpora.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      BASE=https://storage.yandexcloud.net/download-resources-for-apatsev
+      DATA=/home/ubuntu/.rally/benchmarks/data
+      TRIES=5
+      ok() {
+        dest=$1
+        size=$2
+        sha=$3
+        [ -f "$dest" ] || return 1
+        [ "$(stat -c%s "$dest")" = "$size" ] || return 1
+        [ "$(sha256sum "$dest" | awk '{print $1}')" = "$sha" ]
+      }
+      fetch() {
+        url=$1
+        dest=$2
+        size=$3
+        sha=$4
+        i=1
+        while [ "$i" -le "$TRIES" ]; do
+          ok "$dest" "$size" "$sha" && return 0
+          rm -f "$dest"
+          if curl -fL --retry 5 --retry-delay 5 -o "$dest" "$url" && ok "$dest" "$size" "$sha"; then
+            return 0
+          fi
+          echo "retry $i: $dest want=$size $sha" >&2
+          rm -f "$dest"
+          i=$((i + 1))
+        done
+        echo "failed $dest" >&2
+        return 1
+      }
+      mkdir -p "$DATA/linestrings" "$DATA/multilinestrings" "$DATA/polygons"
+      fetch "$BASE/linestrings.json.bz2" "$DATA/linestrings/linestrings.json.bz2" 3698508764 12c02f175e1f74bd09f5ea73ef74f289883628f374c523e3422163d9469516ed || exit 1
+      fetch "$BASE/multilinestrings.json.bz2" "$DATA/multilinestrings/multilinestrings.json.bz2" 1817213095 c9f373683c3878eaa8c5cb535424a1d190ccca449f944a91191acf74f4b438fe || exit 1
+      i=1
+      while [ "$i" -le "$TRIES" ]; do
+        if fetch "$BASE/polygons.json.bz2.00" "$DATA/polygons/polygons.json.bz2.00" 4418558680 4839955f5426edda2d3fae67ae42e34b9fa059ddb43de0de1cbad0b9f2a7dbad \
+          && fetch "$BASE/polygons.json.bz2.01" "$DATA/polygons/polygons.json.bz2.01" 4418558679 4b9f0204323705b5ead5c19b922c3b700cb1a777a7e51c585ff5dc5996f65bf3; then
+          cat "$DATA/polygons/polygons.json.bz2.00" "$DATA/polygons/polygons.json.bz2.01" > "$DATA/polygons/polygons.json.bz2"
+          if ok "$DATA/polygons/polygons.json.bz2" 8837117359 e0526bb7b5c71ae7cc150205f25013e4311321dc986a306f56ff6c8e68e4a910; then
+            rm -f "$DATA/polygons/polygons.json.bz2.00" "$DATA/polygons/polygons.json.bz2.01"
+            exit 0
+          fi
+          echo "retry $i: polygons.json.bz2 size or sha256 mismatch" >&2
+        fi
+        rm -f "$DATA/polygons/polygons.json.bz2" "$DATA/polygons/polygons.json.bz2.00" "$DATA/polygons/polygons.json.bz2.01"
+        i=$((i + 1))
+      done
+      echo "failed $DATA/polygons/polygons.json.bz2" >&2
+      exit 1
 runcmd:
-  - mkdir -p /home/ubuntu/id-log /home/ubuntu/.rally/benchmarks/data/linestrings /home/ubuntu/.rally/benchmarks/data/multilinestrings /home/ubuntu/.rally/benchmarks/data/polygons /home/ubuntu/.rally/benchmarks/tracks
-  - curl -fL --retry 5 --retry-delay 5 -o /home/ubuntu/.rally/benchmarks/data/linestrings/linestrings.json.bz2 https://storage.yandexcloud.net/download-resources-for-apatsev/linestrings.json.bz2
-  - curl -fL --retry 5 --retry-delay 5 -o /home/ubuntu/.rally/benchmarks/data/multilinestrings/multilinestrings.json.bz2 https://storage.yandexcloud.net/download-resources-for-apatsev/multilinestrings.json.bz2
-  - curl -fL --retry 5 --retry-delay 5 -o /home/ubuntu/.rally/benchmarks/data/polygons/polygons.json.bz2.00 https://storage.yandexcloud.net/download-resources-for-apatsev/polygons.json.bz2.00
-  - curl -fL --retry 5 --retry-delay 5 -o /home/ubuntu/.rally/benchmarks/data/polygons/polygons.json.bz2.01 https://storage.yandexcloud.net/download-resources-for-apatsev/polygons.json.bz2.01
-  - cat /home/ubuntu/.rally/benchmarks/data/polygons/polygons.json.bz2.00 /home/ubuntu/.rally/benchmarks/data/polygons/polygons.json.bz2.01 > /home/ubuntu/.rally/benchmarks/data/polygons/polygons.json.bz2
-  - rm -f /home/ubuntu/.rally/benchmarks/data/polygons/polygons.json.bz2.00 /home/ubuntu/.rally/benchmarks/data/polygons/polygons.json.bz2.01
+  - mkdir -p /home/ubuntu/id-log /home/ubuntu/.rally/benchmarks/tracks
+  - /usr/local/bin/fetch-rally-corpora.sh
   - curl -fL --retry 5 --retry-delay 5 -o /tmp/rally-tracks-e251f6ca.tar.gz https://storage.yandexcloud.net/download-resources-for-apatsev/rally-tracks-e251f6ca.tar.gz
   - tar -xzf /tmp/rally-tracks-e251f6ca.tar.gz -C /tmp
   - rm -rf /home/ubuntu/.rally/benchmarks/tracks/default
