@@ -30,6 +30,11 @@ output "kibana_url" {
   value       = "http://kibana.${local.traefik_ip}.sslip.io"
 }
 
+output "kibana_user" {
+  description = "Логин Kibana (пользователь elastic)"
+  value       = "elastic"
+}
+
 output "traefik_ip" {
   description = "Reserved internal IP Traefik NLB"
   value       = local.traefik_ip
@@ -38,4 +43,9 @@ output "traefik_ip" {
 output "grafana_admin_password_command" {
   description = "Команда для получения пароля admin Grafana"
   value       = "kubectl -n vmks get secret vmks-grafana -o jsonpath='{.data.admin-password}' | base64 --decode; echo"
+}
+
+output "kibana_elastic_password_command" {
+  description = "Команда для получения пароля пользователя elastic в Kibana"
+  value       = "kubectl -n elastic get secret chaos-es-elastic-user -o jsonpath='{.data.elastic}' | base64 -d; echo"
 }

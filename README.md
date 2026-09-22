@@ -61,7 +61,7 @@ helm upgrade --install vmks \
     -f vmks-values.yaml
 ```
 
-Grafana и Kibana: `terraform output grafana_url` / `kibana_url`. Пароль Grafana:
+Grafana и Kibana: `terraform output grafana_url` / `kibana_url`. Логин Kibana: `terraform output kibana_user`. Пароли: `terraform output grafana_admin_password_command` / `kibana_elastic_password_command`. Пароль Grafana:
 
 ```bash
 kubectl -n vmks get secret vmks-grafana -o jsonpath='{.data.admin-password}' | base64 --decode; echo
