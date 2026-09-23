@@ -1,14 +1,14 @@
 # Отказоустойчивость Elasticsearch: Chaos Mesh, потеря зоны и Rally
 
-Кластер Elasticsearch из трёх mixed-нод в трёх зонах Yandex Cloud должен переживать убийство пода, деградацию сети и отвал целой AZ — при живой индексации и поиске, без потери уже принятых документов. В этой статье — стенд на ECK, нагрузка Elastic Rally (`geoshape`), Chaos Mesh и `yc compute instance stop` зоны `ru-central1-b`.
+Кластер Elasticsearch из трёх mixed-нод в трёх зонах Yandex Cloud должен переживать убийство пода, деградацию сети и отвал целой AZ — при живой индексации и поиске, без потери уже принятых документов. В этой статье — стенд на ECK, нагрузка Elastic Rally (`geoshape`), Chaos Mesh и сетевая изоляция зоны `ru-central1-b` (пустой Security Group на node group + `disable-zones` на NLB).
 
 Критерии: search жив, index жив, нет потери документов, которые bulk принял до сбоя. Порога «жив / не жив» нет: в таблицы печатаем процент ошибок Rally.
 
 ## Почему трёх нод мало без zone awareness
 
-Три master+data в трёх AZ и `number_of_replicas: 2` ещё не значат «зона может умереть». Без `cluster.routing.allocation.awareness.attributes: zone` Elasticsearch может положить primary и replica в одну зону. Тогда stop зоны `b` забирает больше одной копии.
+Три master+data в трёх AZ и `number_of_replicas: 2` ещё не значат «зона может умереть». Без `cluster.routing.allocation.awareness.attributes: zone` Elasticsearch может положить primary и replica в одну зону. Тогда отвал зоны `b` забирает больше одной копии.
 
-С awareness primary и две replica разъезжаются по `ru-central1-a` / `b` / `d`. С `cluster.routing.allocation.awareness.force.zone.values` третья копия **не** переезжает на живую зону, пока `b` выключена: кластер **yellow**, по одной копии в `a` и `d`. Search и bulk идут. После `start` replica садится на `b` сама. Ручной relocate не нужен.
+С awareness primary и две replica разъезжаются по `ru-central1-a` / `b` / `d`. С `cluster.routing.allocation.awareness.force.zone.values` третья копия **не** переезжает на живую зону, пока `b` изолирована: кластер **yellow**, по одной копии в `a` и `d`. Search и bulk идут. После `restore` replica садится на `b` сама. Ручной relocate не нужен.
 
 ECK HTTP без TLS. Пароль для Rally не нужен: anonymous `superuser` на HTTP. Transport между нодами — как в ECK. Elasticsearch в интернет не публикуем: Rally ходит на internal NLB `:9200`.
 
@@ -117,12 +117,29 @@ kubectl apply -f manifests/exporter/chaos-mesh-scrape.yaml
 
 Хаос и отвал зоны `b` идут **с первой секунды заливки** и крутятся циклом, пока Rally пишет в Elasticsearch. Не ждать конца ingest.
 
+### Отвал зоны b
+
+Зона `b` ломается **сетевой изоляцией**, а не power-off: VM остаётся `RUNNING`, отрезана сеть.
+
+1. `scripts/isolate-zone-b.sh` пишет `.state/zone-b-isolate.env` (исходный список SG node group и id обоих NLB), вешает пустой SG `zone-isolation` на `elastic-chaos-b` через `yc managed-kubernetes node-group update` и делает `disable-zones ru-central1-b` на NLB `chaos-es-http` и `traefik`.
+2. `scripts/restore-zone-b.sh` возвращает исходный список SG (здесь пустой) и `enable-zones` на обоих NLB.
+
+SG заводит Terraform (`sg.tf`), переключает только CLI. Чтобы `terraform apply` не «чинил» эксперимент, у `k8s_node_group_b` стоит `lifecycle.ignore_changes` на `security_group_ids`. Ограничение ЯО: `disable-zones` не чаще раза в 2 минуты на один NLB.
+
+Первый прогон на новом кластере — проверить, что смена SG не пересоздаёт узел:
+
+```bash
+./scripts/verify-ng-sg-swap.sh "$(terraform output -raw zone_isolation_sg_id)"
+```
+
+`VERDICT: HOT-SWAP` — работаем как есть. `VERDICT: RECREATE` — `node-group update` не годится для network partition, isolate/restore переписываются на `yc compute instance update-network-interface`.
+
 Два агента, не один:
 
 | Агент | Что делает | Чего не делает |
 |---|---|---|
-| `script-runner` | простые скрипты: `esrally`, `chaos-loop.sh`, `kubectl apply/delete`, `stop-zone-b.sh`, `start-zone-b.sh` | не проверяет результат |
-| `chaos-check` | `check-chaos.sh`, `check-zone-b-down.sh` | не запускает хаос и не включает ноду |
+| `script-runner` | простые скрипты: `esrally`, `chaos-loop.sh`, `kubectl apply/delete`, `isolate-zone-b.sh`, `restore-zone-b.sh` | не проверяет результат |
+| `chaos-check` | `check-chaos.sh`, `check-zone-b-down.sh` | не запускает хаос и не восстанавливает зону |
 
 SSH на Rally (`terraform output -raw rally_internal_ip`) после `tailscale up --accept-routes`. ES:
 
@@ -151,9 +168,9 @@ EOF
 ./scripts/chaos-loop.sh
 ```
 
-`chaos-loop.sh` крутит слот, пока жив `~/rally-ingest.pid`: pod kill → loss 30% 15 мин → пауза → delay 500 мс 15 мин → `stop-zone-b.sh` на 15 мин → `start-zone-b.sh` → снова. Одновременно не больше одной mixed-ноды.
+`chaos-loop.sh` крутит слот, пока жив `~/rally-ingest.pid`: pod kill → loss 30% 15 мин → пауза → delay 500 мс 15 мин → `isolate-zone-b.sh` на 15 мин → `restore-zone-b.sh` → снова. Одновременно не больше одной mixed-ноды.
 
-Агент `chaos-check` после каждого `apply` и после `stop-zone-b.sh`:
+Агент `chaos-check` после каждого `apply` и после `isolate-zone-b.sh`:
 
 ```bash
 ./scripts/check-chaos.sh podchaos es-pod-kill
@@ -162,11 +179,11 @@ EOF
 ./scripts/check-zone-b-down.sh
 ```
 
-`check-zone-b-down.sh` успешен только если нода не Ready, VM `STOPPED` и InternalIP не отвечает на ping. Preemptible: чужой stop Yandex — не эксперимент. Если нода включилась сама — это не конец слота, `script-runner` снова вызывает `stop-zone-b.sh`.
+`check-zone-b-down.sh` успешен только если нода не Ready, VM **`RUNNING`**, InternalIP не отвечает на ping, а на обоих NLB (`chaos-es-http` и `traefik`) зона `b` есть в `disable_zone_statuses` и target ноды помечен `zone_shifted`. VM `RUNNING`, а не `STOPPED`, — это и отличает нашу изоляцию от preemptible-отвала Яндекса. Если изоляция слетела — это не конец слота, `script-runner` снова вызывает `isolate-zone-b.sh`.
 
-Пока нода мертва: **yellow**, третья replica не на `a`/`d`. Grafana/Kibana/Traefik живы в `a` и `d`. Rally VM в `e` не трогаем. После start replica едет на `b` сама.
+Пока зона `b` изолирована: **yellow**, третья replica не на `a`/`d`. Grafana/Kibana/Traefik живы в `a` и `d`. Rally VM в `e` не трогаем. После restore replica едет на `b` сама.
 
-После ingest: `scripts/check-count.sh`. Стоп-кран: убить Rally, `start-zone-b.sh`, снять Chaos CR.
+После ingest: `scripts/check-count.sh`. Стоп-кран: убить Rally, `restore-zone-b.sh`, снять Chaos CR.
 
 ## Результаты
 
@@ -176,7 +193,7 @@ EOF
 | pod kill | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ |
 | network loss 30% | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ |
 | network delay 500 мс | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ |
-| stop ru-central1-b | yellow | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ |
-| после start b | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ |
+| isolate ru-central1-b | yellow | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ |
+| после restore b | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ | _заполнить_ |
 
 Grafana: `elasticsearch_cluster_health_status`, unassigned shards, exporter latency. Проценты Rally — с VM в таблицу руками.

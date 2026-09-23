@@ -138,6 +138,10 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_b" {
       preemptible = true
     }
   }
+
+  lifecycle {
+    ignore_changes = [instance_template[0].network_interface[0].security_group_ids]
+  }
 }
 
 resource "yandex_kubernetes_node_group" "k8s_node_group_d" {
@@ -192,5 +196,10 @@ output "k8s_cluster_id" {
 output "nlb_subnet_id" {
   description = "Подсеть для internal NLB Elasticsearch"
   value       = local.subnet_a_id
+}
+
+output "zone_isolation_sg_id" {
+  description = "ID пустого Security Group для изоляции зоны b"
+  value       = yandex_vpc_security_group.zone_isolation.id
 }
 

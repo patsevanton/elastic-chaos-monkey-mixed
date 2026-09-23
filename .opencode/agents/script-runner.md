@@ -1,5 +1,5 @@
 ---
-description: Запускает простые скрипты репозитория — esrally, kubectl apply/delete Chaos, stop-zone-b.sh, start-zone-b.sh, chaos-loop.sh. Не анализирует и не проверяет результат.
+description: Запускает простые скрипты репозитория — esrally, kubectl apply/delete Chaos, isolate-zone-b.sh, restore-zone-b.sh, chaos-loop.sh. Не анализирует и не проверяет результат.
 mode: subagent
 permission:
   bash: allow

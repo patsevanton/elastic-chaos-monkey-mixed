@@ -27,6 +27,18 @@ Service account: `elastic-chaos-monkey`.
 
 `rally-vm.tf`: Ubuntu, 8 vCPU / 16 ГБ, SSD 150 ГиБ, без публичного IP (`nat = false`), зона `e`, подсеть `10.0.4.0/24`. Benchmark до ES в `10.0.1/2/3` внутри VPC, без NAT. Исходящий (apt, pip) — NAT Gateway. SSH — внутренний IP после `tailscale up --accept-routes`.
 
+## Изоляция зоны b
+
+Terraform: `sg.tf` — пустой SG `zone-isolation` (deny all), output `zone_isolation_sg_id`. У `k8s_node_group_b` `lifecycle.ignore_changes` на `instance_template[0].network_interface[0].security_group_ids`: `terraform apply` не должен возвращать SG во время эксперимента. Переключение изоляции — только CLI, state до изменений в `.state/zone-b-isolate.env` (`.state/` в `.gitignore`). Механика isolate/restore — в [README.md](README.md).
+
+NLB id. Оба CCM-ных NLB (`chaos-es-http`, `traefik`) скрипты находят по `listeners[].address` = ingress IP сервиса: аннотации `yandex.cloud/load-balancer-id` у Service нет.
+
+Check отвала зоны. `disable_zone_statuses` + `zone_shifted` у target'а ноды. Не `status=HEALTHY`: health check проходит и при отключённой зоне.
+
+Первый прогон на кластере. `./scripts/verify-ng-sg-swap.sh "$(terraform output -raw zone_isolation_sg_id)"`. `VERDICT: HOT-SWAP` — работаем как есть. `VERDICT: RECREATE` — `node-group update` пересоздаёт узел, значит это не network partition: isolate/restore переписать на `yc compute instance update-network-interface`.
+
+Лимит ЯО. `disable-zones` не чаще одного раза в 2 минуты на один NLB.
+
 ## Требования
 
 - [yc CLI](https://yandex.cloud/ru/docs/cli/), `yc init`

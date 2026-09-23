@@ -38,11 +38,11 @@ while rally_alive; do
   sleep 60
   rally_alive || break
 
-  echo "slot ${slot} stop-zone-b $(date -u +%H:%M:%S)"
-  ./scripts/stop-zone-b.sh
+  echo "slot ${slot} isolate-zone-b $(date -u +%H:%M:%S)"
+  ./scripts/isolate-zone-b.sh
   sleep "${HOLD}"
-  echo "slot ${slot} start-zone-b $(date -u +%H:%M:%S)"
-  ./scripts/start-zone-b.sh
+  echo "slot ${slot} restore-zone-b $(date -u +%H:%M:%S)"
+  ./scripts/restore-zone-b.sh
   wait_es_ready
 done
 echo "ingest finished, chaos loop stop"
