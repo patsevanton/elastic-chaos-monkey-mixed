@@ -108,7 +108,10 @@ helm upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
   --set chaosDaemon.runtime=containerd \
   --set chaosDaemon.socketPath=/run/containerd/containerd.sock \
   --set controllerManager.replicaCount=3
+kubectl apply -f manifests/exporter/chaos-mesh-scrape.yaml
 ```
+
+Дашборды Elasticsearch (mixin экспортёра v1.9.0) и Chaos Mesh Overview chart vmks качает сам: `defaultDashboards.sources` в `vmks-values.yaml`. В Grafana у обоих выбрать datasource VictoriaMetrics. У Chaos Mesh Overview: Namespace `chaos-mesh`.
 
 ## Шаг 3. Ingest geoshape, затем mixed
 

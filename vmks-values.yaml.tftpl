@@ -8,6 +8,13 @@ grafana:
     hosts:
       - grafana.${ingress_ip}.sslip.io
 
+defaultDashboards:
+  sources:
+    elasticsearch-exporter-cluster:
+      url: https://raw.githubusercontent.com/prometheus-community/elasticsearch_exporter/v1.9.0/elasticsearch-mixin/compiled/dashboards/cluster.json
+    chaos-mesh-overview:
+      url: https://grafana.com/api/dashboards/15918/revisions/1/download
+
 defaultDatasources:
   victoriametrics:
     datasources:

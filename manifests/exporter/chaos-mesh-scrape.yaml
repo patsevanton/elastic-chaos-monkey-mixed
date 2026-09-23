@@ -1,0 +1,17 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: chaos-mesh-controller-manager
+  namespace: chaos-mesh
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: chaos-mesh
+      app.kubernetes.io/instance: chaos-mesh
+      app.kubernetes.io/component: controller-manager
+  namespaceSelector:
+    matchNames:
+      - chaos-mesh
+  endpoints:
+    - port: http
+      interval: 20s
