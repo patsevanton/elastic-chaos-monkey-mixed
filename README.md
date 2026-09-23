@@ -120,7 +120,7 @@ export ES_URL=http://$(kubectl -n elastic get svc chaos-es-http -o jsonpath='{.s
 
 (IP NLB с ноутбука через kubectl; на VM подставьте тот же адрес.)
 
-Индексы: `osmlinestrings`, `osmmultilinestrings`, `osmpolygons`. 1 primary, 2 replica — challenge/track-params. Challenge `append-no-conflicts-big` (полный корпус ~60.5M / ~45 ГиБ):
+Индекс: `osmlinestrings` (20 532 036 документов). `osmpolygons` в challenge закомментирован и не заливается. 1 primary, 2 replica — challenge/track-params. Challenge `append-no-conflicts-big`:
 
 ```bash
 source ~/venv/bin/activate

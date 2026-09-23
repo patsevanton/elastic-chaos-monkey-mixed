@@ -86,7 +86,7 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_a" {
 
     resources {
       cores  = 8
-      memory = 24
+      memory = 16
     }
 
     boot_disk {
@@ -126,7 +126,7 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_b" {
 
     resources {
       cores  = 8
-      memory = 24
+      memory = 16
     }
 
     boot_disk {
@@ -166,7 +166,7 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_d" {
 
     resources {
       cores  = 8
-      memory = 24
+      memory = 16
     }
 
     boot_disk {
