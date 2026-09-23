@@ -107,11 +107,11 @@ write_files:
 runcmd:
   - mkdir -p /home/ubuntu/id-log /home/ubuntu/.rally/benchmarks/tracks
   - /usr/local/bin/fetch-rally-corpora.sh
-  - curl -fL --retry 5 --retry-delay 5 -o /tmp/rally-tracks-e251f6ca.tar.gz https://storage.yandexcloud.net/download-resources-for-apatsev/rally-tracks-e251f6ca.tar.gz
-  - tar -xzf /tmp/rally-tracks-e251f6ca.tar.gz -C /tmp
+  - curl -fL --retry 5 --retry-delay 5 -o /tmp/rally-tracks-nomvt-8500.tar.gz https://storage.yandexcloud.net/download-resources-for-apatsev/rally-tracks-nomvt-8500.tar.gz
+  - tar -xzf /tmp/rally-tracks-nomvt-8500.tar.gz -C /tmp
   - rm -rf /home/ubuntu/.rally/benchmarks/tracks/default
   - mv /tmp/rally-tracks /home/ubuntu/.rally/benchmarks/tracks/default
-  - rm -f /tmp/rally-tracks-e251f6ca.tar.gz
+  - rm -f /tmp/rally-tracks-nomvt-8500.tar.gz
   - chown -R ubuntu:ubuntu /home/ubuntu
   - sudo -u ubuntu git -C /home/ubuntu/.rally/benchmarks/tracks/default remote remove origin
   - sudo -u ubuntu python3 -m venv /home/ubuntu/venv

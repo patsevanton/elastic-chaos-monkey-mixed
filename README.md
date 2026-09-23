@@ -113,7 +113,16 @@ kubectl apply -f manifests/exporter/chaos-mesh-scrape.yaml
 
 Дашборды Elasticsearch (mixin экспортёра v1.9.0) и Chaos Mesh Overview chart vmks качает сам: `defaultDashboards.sources` в `vmks-values.yaml`. В Grafana у обоих выбрать datasource VictoriaMetrics. У Chaos Mesh Overview: Namespace `chaos-mesh`.
 
-## Шаг 3. Ingest geoshape, затем mixed
+## Шаг 3. Заливка и хаос одновременно
+
+Хаос и отвал зоны `b` идут **с первой секунды заливки** и крутятся циклом, пока Rally пишет в Elasticsearch. Не ждать конца ingest.
+
+Два агента, не один:
+
+| Агент | Что делает | Чего не делает |
+|---|---|---|
+| `script-runner` | простые скрипты: `esrally`, `chaos-loop.sh`, `kubectl apply/delete`, `stop-zone-b.sh`, `start-zone-b.sh` | не проверяет результат |
+| `chaos-check` | `check-chaos.sh`, `check-zone-b-down.sh` | не запускает хаос и не включает ноду |
 
 SSH на Rally (`terraform output -raw rally_internal_ip`) после `tailscale up --accept-routes`. ES:
 
@@ -123,55 +132,41 @@ export ES_URL=http://$(kubectl -n elastic get svc chaos-es-http -o jsonpath='{.s
 
 (IP NLB с ноутбука через kubectl; на VM подставьте тот же адрес.)
 
-Индекс: `osmlinestrings` (20 532 036 документов). `osmpolygons` в challenge закомментирован и не заливается. 1 primary, 2 replica — challenge/track-params. Challenge `append-no-conflicts-big`:
+Индекс: `osmlinestrings` (20 532 036 документов). `osmpolygons` в challenge закомментирован и не заливается. 1 primary, 2 replica — challenge/track-params. Challenge `append-no-conflicts-big`. `mvt-grid` в архиве трека нет.
+
+Агент `script-runner` стартует заливку в фоне, затем сразу цикл хаоса:
 
 ```bash
+ssh -o BatchMode=yes ubuntu@$(terraform output -raw rally_internal_ip) 'bash -s' <<EOF
+set -euo pipefail
+export ES_URL=http://$(kubectl -n elastic get svc chaos-es-http -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):9200
 source ~/venv/bin/activate
-esrally race --track=geoshape --pipeline=benchmark-only \
-  --target-hosts="${ES_URL#http://}" \
+nohup esrally race --track=geoshape --pipeline=benchmark-only \
+  --target-hosts="\${ES_URL#http://}" \
   --track-params='number_of_shards:1,number_of_replicas:2' \
-  --challenge=append-no-conflicts-big
+  --challenge=append-no-conflicts-big \
+  > ~/rally-ingest.log 2>&1 &
+echo \$! > ~/rally-ingest.pid
+EOF
+./scripts/chaos-loop.sh
 ```
 
-После ingest: `scripts/check-count.sh`. Дальше 4–6 часов mixed bulk+search (свой schedule поверх залитых индексов; id успешных bulk — в `~/id-log/bulk-ids.txt`). Нагрузку не останавливаем на время хаоса.
+`chaos-loop.sh` крутит слот, пока жив `~/rally-ingest.pid`: pod kill → loss 30% 15 мин → пауза → delay 500 мс 15 мин → `stop-zone-b.sh` на 15 мин → `start-zone-b.sh` → снова. Одновременно не больше одной mixed-ноды.
 
-## Три опыта (~30–40 мин каждый)
-
-Одновременно бьём не больше одной mixed-ноды. Preemptible: чужой stop Yandex — не эксперимент.
-
-### 1. Pod kill
+Агент `chaos-check` после каждого `apply` и после `stop-zone-b.sh`:
 
 ```bash
-kubectl apply -f manifests/chaos/pod-kill.yaml
+./scripts/check-chaos.sh podchaos es-pod-kill
+./scripts/check-chaos.sh networkchaos es-network-loss
+./scripts/check-chaos.sh networkchaos es-network-delay
+./scripts/check-zone-b-down.sh
 ```
 
-Один ES-под. ECK поднимает его сам. Смотрим health, unassigned, % ошибок Rally, `_count` vs принятые bulk, `scripts/sample-mget.sh`.
-
-### 2. Сеть, только зона b
-
-```bash
-kubectl apply -f manifests/chaos/network-loss.yaml
-# ~15 мин, затем
-kubectl delete -f manifests/chaos/network-loss.yaml
-# пауза, чистая сеть
-kubectl apply -f manifests/chaos/network-delay.yaml
-# ~15 мин
-kubectl delete -f manifests/chaos/network-delay.yaml
-```
-
-Loss 30%, затем delay 500 мс на ES в `ru-central1-b`.
-
-### 3. Отвал зоны b
-
-```bash
-./scripts/stop-zone-b.sh
-# держим выключенной часть слота
-./scripts/start-zone-b.sh
-```
+`check-zone-b-down.sh` успешен только если нода не Ready, VM `STOPPED` и InternalIP не отвечает на ping. Preemptible: чужой stop Yandex — не эксперимент. Если нода включилась сама — это не конец слота, `script-runner` снова вызывает `stop-zone-b.sh`.
 
 Пока нода мертва: **yellow**, третья replica не на `a`/`d`. Grafana/Kibana/Traefik живы в `a` и `d`. Rally VM в `e` не трогаем. После start replica едет на `b` сама.
 
-Стоп-кран: остановить Rally, `start-zone-b.sh`, снять Chaos CR.
+После ingest: `scripts/check-count.sh`. Стоп-кран: убить Rally, `start-zone-b.sh`, снять Chaos CR.
 
 ## Результаты
 
