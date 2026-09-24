@@ -176,7 +176,7 @@ Cloud-init: `cloud-init/rally.yaml`, `cloud-init/headscale.yaml.tftpl`.
 - `manifests/chaos-mesh/` — RBAC и SA-токен для Chaos Dashboard.
 - `manifests/ingress/` — Ingress Kibana без middleware basic auth.
 
-`scripts/` — изоляция/восстановление зоны `b` (`isolate-zone-b.sh` / `restore-zone-b.sh`), `verify-ng-sg-swap.sh`, `chaos-loop.sh`, `check-chaos.sh`, `check-zone-b-down.sh`, `check-count.sh`, `sample-mget.sh`, `apply-eck.sh`, `download-geoshape.sh`, headscale-скрипты для `data.external`.
+`scripts/` — изоляция/восстановление зоны `b` (`isolate-zone-b.sh` / `restore-zone-b.sh`), `verify-ng-sg-swap.sh`, `chaos-loop.sh`, `check-chaos.sh`, `check-zone-b-down.sh`, `check-count.sh`, `sample-mget.sh`, `apply-eck.sh`, headscale-скрипты для `data.external`.
 
 `README.md` — полный текст статьи, H1: **Отказоустойчивость Elasticsearch: Chaos Mesh, потеря зоны и Rally**. Таблицы результатов — плейсхолдеры до прогона.
 
