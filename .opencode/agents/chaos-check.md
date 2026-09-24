@@ -1,6 +1,7 @@
 ---
 description: Проверяет Chaos Mesh и что зона b изолирована: нода не Ready, VM RUNNING, InternalIP тихий, NLB disable-zones. Не запускает хаос и не восстанавливает зону.
 mode: subagent
+model: openai/gpt-6-luna-pro
 permission:
   edit: deny
   bash:
