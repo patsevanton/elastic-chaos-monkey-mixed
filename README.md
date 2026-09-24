@@ -23,7 +23,7 @@ Terraform: Managed K8s **1.33**, SA `elastic-chaos-monkey`, три node group п
 | ECK operator 3.5.0 ×3 | `elastic-system` |
 | Chaos Mesh 2.8.4, controller ×3 | `chaos-mesh` |
 | elasticsearch_exporter ×3 | `elastic` |
-| Grafana / Traefik ×3 | `vmks` / `traefik` |
+| Grafana ×1 / Traefik ×3 | `vmks` / `traefik` |
 | VMCluster RF=3 | vmstorage 1 vCPU / 2 ГиБ / HDD 30 ГиБ |
 | Rally VM | `ru-central1-e`, 8 vCPU / 16 ГБ, SSD 150 ГиБ, без публичного IP |
 | Headscale VM | `ru-central1-a`, `10.0.0.0/24`, 2 vCPU / 4 ГБ, HDD 20 ГиБ, единственный публичный IP, subnet router |
@@ -33,22 +33,21 @@ Terraform: Managed K8s **1.33**, SA `elastic-chaos-monkey`, три node group п
 ## Шаг 0. Кластер, Headscale и vmks
 
 ```bash
+export TF_VAR_folder_id=<folder id>
 terraform init
 terraform apply
 ```
 
 В Terraform явно закреплены внутренние адреса: Traefik `10.0.1.33` (Grafana, Kibana, Chaos Dashboard) и ES NLB `10.0.1.5`. После полного `terraform destroy` и нового `terraform apply` эти IP повторно запрашиваются из тех же подсетей. Если адрес уже занят другим ресурсом, apply остановится, а не выдаст другой IP. Перед изменением работающего стенда проверьте `terraform plan`: существующий адрес Traefik не должен заменяться. На текущем стенде `10.0.1.5` пока занят эфемерным адресом CCM; не применяйте создание нового reserved address поверх работающего ES NLB. Применяйте конфигурацию после штатного удаления стенда (CCM сначала удалит NLB); миграция без простоя здесь не предусмотрена. Публичный IP Headscale при destroy/apply не сохраняется.
 
-Ключ ноутбука и вход в tailnet:
+Ключ ноутбука и вход в tailnet (канон — output `headscale_login_command`):
 
 ```bash
-terraform output -raw headscale_laptop_preauth
 terraform output -raw headscale_login_command
-tailscale up --login-server=$(terraform output -raw headscale_url) \
+sudo tailscale up --login-server=$(terraform output -raw headscale_url) \
   --auth-key=$(terraform output -raw headscale_laptop_preauth) \
-  --accept-routes
+  --accept-routes --force-reauth
 yc managed-kubernetes cluster get-credentials --id $(terraform output -raw k8s_cluster_id) --internal --force
-chmod +x scripts/*.sh
 ```
 
 ```bash
@@ -178,22 +177,33 @@ EOF
 ./scripts/chaos-loop.sh
 ```
 
-`chaos-loop.sh` крутит слот, пока жив `~/rally-ingest.pid`: pod kill → loss 30% 15 мин → пауза → delay 500 мс 15 мин → `isolate-zone-b.sh` на 15 мин → `restore-zone-b.sh` → снова. Одновременно не больше одной mixed-ноды.
+`chaos-loop.sh` крутит слот, пока жив `~/rally-ingest.pid`: pod kill (apply → 20 с → wait ready → delete) → loss 30% 900 с → пауза 60 с → delay 500 мс 900 с → пауза 60 с → `isolate-zone-b.sh` на `HOLD` (умолч. 900 с) → `restore-zone-b.sh` → снова. `HOLD` действует только на этап isolate. Одновременно не больше одной mixed-ноды.
 
-Агент `chaos-check` после каждого `apply` и после `isolate-zone-b.sh`:
+Агент `chaos-check` — проверка каждого шага отдельно, не все команды разом:
+
+- после `kubectl apply` Chaos CR: `./scripts/check-chaos.sh <kind> <name>` (для `es-network-loss` и `es-network-delay`);
+- после `isolate-zone-b.sh`: `./scripts/check-zone-b-down.sh`.
 
 ```bash
-./scripts/check-chaos.sh podchaos es-pod-kill
 ./scripts/check-chaos.sh networkchaos es-network-loss
 ./scripts/check-chaos.sh networkchaos es-network-delay
 ./scripts/check-zone-b-down.sh
 ```
 
+**Надо перепроверить:** у PodChaos `duration: 1s`, а `check-chaos.sh` требует `phase=Injected` — для `es-pod-kill` проверка почти наверняка не успевает поймать фазу.
+
+NetworkChaos по смыслу эксперимента — деградация в **оба** направления (`both`). **Надо перепроверить:** в `manifests/chaos/network-loss.yaml` и `network-delay.yaml` поле `direction` не задано.
+
 `check-zone-b-down.sh` успешен только если нода не Ready, VM **`RUNNING`**, InternalIP не отвечает на ping, а на обоих NLB (`chaos-es-http` и `traefik`) зона `b` есть в `disable_zone_statuses` и target ноды помечен `zone_shifted`. VM `RUNNING`, а не `STOPPED`, — это и отличает нашу изоляцию от preemptible-отвала Яндекса. Если изоляция слетела — это не конец слота, `script-runner` снова вызывает `isolate-zone-b.sh`.
 
 Пока зона `b` изолирована: **yellow**, третья replica не на `a`/`d`. Grafana/Kibana/Traefik живы в `a` и `d`. Rally VM в `e` не трогаем. После restore replica едет на `b` сама.
 
-После ingest: `scripts/check-count.sh`. Стоп-кран: убить Rally, `restore-zone-b.sh`, снять Chaos CR.
+После ingest:
+
+- `scripts/check-count.sh` — `_count` индекса vs accepted bulk. Переменные: `ES_URL` (умолч. `http://127.0.0.1:9200`), `INDEX` (умолч. `osmlinestrings`); аргумент `$1` — число успешно принятых bulk из отчёта Rally.
+- `scripts/sample-mget.sh` — выборка id из id-лога и проверка наличия документов. Переменные: `ES_URL`, `INDEX`, `ID_LOG` (умолч. `$HOME/id-log/bulk-ids.txt`); аргумент `$1` — размер выборки N (умолч. 20). **Надо перепроверить:** кто пишет `bulk-ids.txt` — в репозитории видно только `mkdir` каталога `~/id-log` в cloud-init, сам файл, судя по всему, пишет трек `rally-tracks-nomvt-8500-v3.tar.gz`.
+
+Стоп-кран: убить Rally, `restore-zone-b.sh`, снять Chaos CR.
 
 ## Результаты
 

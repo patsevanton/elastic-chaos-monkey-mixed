@@ -50,15 +50,17 @@ Check отвала зоны. `disable_zone_statuses` + `zone_shifted` у target'
 - kubectl, Helm >= 3
 - Tailscale-клиент на ноутбуке
 - `~/.ssh/id_ed25519.pub` для Headscale и Rally VM
+- `jq`, `python3`, `curl` (скрипты `scripts/`)
 
 ## Запуск
 
 ```bash
+export TF_VAR_folder_id=<folder id>
 terraform init
 terraform apply
-tailscale up --login-server=$(terraform output -raw headscale_url) \
+sudo tailscale up --login-server=$(terraform output -raw headscale_url) \
   --auth-key=$(terraform output -raw headscale_laptop_preauth) \
-  --accept-routes
+  --accept-routes --force-reauth
 yc managed-kubernetes cluster get-credentials --id $(terraform output -raw k8s_cluster_id) --internal --force
 kubectl get nodes
 ```

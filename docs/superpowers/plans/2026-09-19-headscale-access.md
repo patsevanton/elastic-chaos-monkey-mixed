@@ -6,7 +6,7 @@
 
 **Architecture:** Headscale 0.29.3 на preemptible VM в `ru-central1-a` (встроенный ACME, embedded DERP) + `tailscaled` subnet router на `10.0.1.0/24`–`10.0.4.0/24`. k8s `public_ip = false`, Rally `nat = false`, Traefik/vmks — helm CLI после `tailscale up`. Reserved IP и `wait_lb_release` переиспользуются.
 
-**Tech stack:** Terraform (yandex, time), cloud-init, Headscale 0.29.3, Tailscale ≥ 1.80.0, Helm Traefik 41.6.0, victoria-metrics-k8s-stack 0.92.1.
+**Tech stack:** Terraform (yandex, time, external, local), cloud-init, Headscale 0.29.3, Tailscale 1.102.4, Helm Traefik 41.6.0, victoria-metrics-k8s-stack 0.92.1.
 
 **Spec:** [docs/superpowers/specs/2026-09-18-elastic-chaos-monkey-mixed-design.md](../specs/2026-09-18-elastic-chaos-monkey-mixed-design.md)
 
@@ -18,8 +18,6 @@
 
 - `headscale-vm.tf`
 - `cloud-init/headscale.yaml.tftpl`
-- `scripts/render-vmks-values.sh`
-- `scripts/install-traefik.sh`
 
 Изменить:
 
@@ -29,7 +27,9 @@
 - `vmks-values.yaml.tftpl` (имя переменной IP)
 - `README.md`, `INFRASTRUCTURE.md`, `AGENTS.md`
 
-Удалить логику: `helm_release.traefik`, provider `helm`, `local_file.write_vmks_values` на apply, `kibana_ingress_password`, Middleware basic auth.
+Удалить логику: `helm_release.traefik`, provider `helm`, `kibana_ingress_password`, Middleware basic auth.
+
+Не создавать отдельные `scripts/render-vmks-values.sh` и `scripts/install-traefik.sh`: values пишет Terraform (`local_file.write_vmks_values` / `write_traefik_values` остаются, provider `local` нужен), helm-команды — в README.
 
 ---
 
@@ -37,13 +37,13 @@
 
 **Files:** `k8s.tf`, `rally-vm.tf`, `providers.tf`, `versions.tf`, `variables.tf`
 
-- [ ] В `k8s.tf` у master: `public_ip = false`.
-- [ ] Output credentials: `--internal --force` вместо `--external`.
-- [ ] Комментарий `depends_on = time_sleep.wait_lb_release`: пауза destroy, чтобы CCM снял **internal** NLB Traefik (и ES), не «адрес ingress занят публичным LB».
-- [ ] В `rally-vm.tf`: `nat = false`. Удалить output `rally_public_ip`. Оставить `rally_internal_ip`.
-- [ ] В `providers.tf`: удалить provider `helm`.
-- [ ] В `versions.tf`: удалить `helm` и `local` из `required_providers`, если после Task 3 `local_file` больше нет.
-- [ ] В `variables.tf`: удалить `kibana_ingress_password`.
+- [x] В `k8s.tf` у master: `public_ip = false`.
+- [x] Output credentials: `--internal --force` вместо `--external`.
+- [x] Комментарий `depends_on = time_sleep.wait_lb_release`: пауза destroy, чтобы CCM снял **internal** NLB Traefik (и ES), не «адрес ingress занят публичным LB».
+- [x] В `rally-vm.tf`: `nat = false`. Удалить output `rally_public_ip`. Оставить `rally_internal_ip`.
+- [x] В `providers.tf`: удалить provider `helm`.
+- [x] В `versions.tf`: удалить `helm` из `required_providers`; `local` **оставить** — `local_file` продолжает писать values на apply.
+- [x] В `variables.tf`: удалить `kibana_ingress_password`.
 
 ---
 
@@ -51,9 +51,9 @@
 
 **Files:** `ip-dns.tf`, `locals.tf`
 
-- [ ] Ресурс `yandex_vpc_address.ingress` **не удалять**. Имя можно оставить `elastic-chaos-ingress-pip` (переиспользование). Зона `ru-central1-a`.
-- [ ] `time_sleep.wait_lb_release` **не удалять**: `destroy_duration = "60s"`, `depends_on = [yandex_vpc_address.ingress]`. Обновить комментарий: кластер destroy → пауза → дальше IP/сеть; CCM успевает снять internal NLB. IP теперь на Headscale VM, не на Traefik.
-- [ ] В `locals.tf`:
+- [x] Ресурс `yandex_vpc_address.ingress` **не удалять**. Имя можно оставить `elastic-chaos-ingress-pip` (переиспользование). Зона `ru-central1-a`.
+- [x] `time_sleep.wait_lb_release` **не удалять**: `destroy_duration = "60s"`, `depends_on = [yandex_vpc_address.ingress]`. Обновить комментарий: кластер destroy → пауза → дальше IP/сеть; CCM успевает снять internal NLB. IP теперь на Headscale VM, не на Traefik.
+- [x] В `locals.tf`:
   - `ingress_ip` = адрес `yandex_vpc_address.ingress` (это PIP Headscale).
   - `headscale_fqdn` = `headscale.${local.ingress_ip}.sslip.io`
   - Убрать `grafana_fqdn` / `kibana_fqdn` из Terraform (IP Traefik неизвестен до helm).
@@ -64,17 +64,17 @@
 
 **Files:** `headscale-vm.tf` (новый), `cloud-init/headscale.yaml.tftpl` (новый), `monitoring.tf`
 
-- [ ] VM `yandex_compute_instance.headscale`:
+- [x] VM `yandex_compute_instance.headscale`:
   - name `elastic-chaos-headscale`, `platform_id = standard-v3`, зона `local.subnet_a_zone`
   - 2 vCPU / 4 ГБ, HDD 20 ГиБ, image `fd806c8slu9j1pa87msc`
   - `scheduling_policy { preemptible = true }`
   - `network_interface`: subnet `a`, `nat = true`, `nat_ip_address = yandex_vpc_address.ingress.external_ipv4_address[0].address`
   - `ssh-keys` = `ubuntu:${file("~/.ssh/id_ed25519.pub")}`
   - `user-data` = `templatefile` cloud-init с `headscale_fqdn` и `ingress_ip`
-- [ ] Cloud-init (Ubuntu 22.04):
+- [x] Cloud-init (Ubuntu 22.04):
   - sysctl: `net.ipv4.ip_forward=1`, `net.ipv6.conf.all.forwarding=1`
-  - поставить Headscale **0.29.3** DEB с GitHub releases (`headscale_0.29.3_linux_amd64.deb`)
-  - поставить Tailscale (официальный repo, клиент ≥ 1.80.0)
+  - поставить Headscale **0.29.3** DEB с Yandex Object Storage (`headscale_0.29.3_linux_amd64.deb`)
+  - поставить Tailscale **1.102.4** DEB с Yandex Object Storage (`apt-mark hold tailscale`)
   - `/etc/headscale/config.yaml`: `server_url` / `tls_letsencrypt_hostname` = FQDN; `listen_addr: 0.0.0.0:443`; ACME HTTP-01; `tls_letsencrypt_listen: :80`; SQLite `/var/lib/headscale`; `derp.server.enabled: true`, `ipv4: <PIP>`, `derp.urls: []`
   - `systemctl enable --now headscale`
   - дождаться `/health` по HTTPS (с ретраями: сертификат ACME не мгновенный)
@@ -82,20 +82,20 @@
   - два reusable preauth TTL 24h: router и laptop; ключ laptop в `/var/lib/headscale/laptop-preauth.key` (режим 0640, группа ubuntu или файл, который Terraform читает по SSH)
   - `tailscale up --login-server=https://<FQDN> --authkey=<router> --advertise-routes=10.0.1.0/24,10.0.2.0/24,10.0.3.0/24,10.0.4.0/24 --accept-dns=false`
   - `headscale nodes approve-routes` для четырёх префиксов (после появления ноды; ретраи)
-- [ ] Terraform: remote-exec или `ssh` provisioner **не обязателен**, если ключ на диске. Output `headscale_laptop_preauth` — `sensitive`, читать файл по SSH (`ssh ubuntu@PIP cat ...`) через `terraform_data` + `local-exec`, либо документировать `ssh ... cat` в README, если чтение из Terraform хрупко. Предпочтение: README + output FQDN/PIP; ключ забирать командой из README (меньше гонок cloud-init vs apply). **Решение плана:** apply не ждёт ключ; в README команда `ssh ubuntu@$(terraform output -raw headscale_public_ip) sudo cat /var/lib/headscale/laptop-preauth.key`.
-- [ ] Outputs: `headscale_public_ip`, `headscale_url` (`https://${local.headscale_fqdn}`), `headscale_login_command` (шаблон `tailscale up --login-server=... --accept-routes`).
-- [ ] `monitoring.tf`: удалить `locals.vmks_values`, `local_file.write_vmks_values`, `helm_release.traefik`, outputs `grafana_url` / `kibana_url` (или заменить текстом «после helm Traefik, см. README»). Оставить `grafana_admin_password_command`.
+- [x] Terraform **ждёт** ключ: `data.external.headscale_laptop_preauth` (`scripts/fetch-headscale-preauth.sh`) после `data.external.headscale_service_ready` (`scripts/wait-headscale-ready.sh`). Output `headscale_laptop_preauth` — `sensitive`. Ключ читается по SSH с ноутбука через `data.external`, не «вручную в README».
+- [x] Outputs: `headscale_public_ip`, `headscale_url` (`https://${local.headscale_fqdn}`), `headscale_login_command` (шаблон `tailscale up --login-server=... --accept-routes`).
+- [x] `monitoring.tf`: удалить `helm_release.traefik`. `locals.vmks_values`, `local_file.write_vmks_values`, outputs `grafana_url` / `kibana_url` и `grafana_admin_password_command` **оставить**.
 
 ---
 
-### Task 4: Скрипты Traefik / vmks / ECK, Ingress без basic auth
+### Task 4: Traefik / vmks / ECK, Ingress без basic auth
 
-**Files:** `scripts/install-traefik.sh`, `scripts/render-vmks-values.sh`, `scripts/apply-eck.sh`, `manifests/ingress/kibana.yaml`, `vmks-values.yaml.tftpl`
+**Files:** `scripts/apply-eck.sh`, `manifests/ingress/kibana.yaml`, `vmks-values.yaml.tftpl`
 
-- [ ] `install-traefik.sh`: helm Traefik **41.6.0**, namespace `traefik`, 3 реплики, topology spread как в нынешнем `monitoring.tf`; Service LoadBalancer; annotations `yandex.cloud/load-balancer-type: internal`, `yandex.cloud/subnet-id` = `terraform output -raw nlb_subnet_id`. Без `loadBalancerIP`. Image registry `ghcr.io` / `traefik/traefik` как сейчас.
-- [ ] `render-vmks-values.sh`: IP = `kubectl -n traefik get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}'`; `sed`/`envsubst` в `vmks-values.yaml.tftpl`. Переименовать плейсхолдер tftpl: `ingress_public_ip` → `ingress_ip` (это internal NLB).
-- [ ] `kibana.yaml`: удалить Middleware `kibana-auth` и annotation `router.middlewares`. Host по-прежнему `kibana.INGRESS_IP.sslip.io` (подстановка internal IP).
-- [ ] `apply-eck.sh`: убрать `KIBANA_INGRESS_PASSWORD`, `htpasswd`, secret `kibana-basic-auth`. `INGRESS_IP` — IP Traefik svc, не `terraform output ingress_ip` (тот теперь Headscale). `NLB_SUBNET_ID` — как сейчас.
+- [x] Traefik: helm CLI в README, chart **41.6.0**, namespace `traefik`, 3 реплики, topology spread; Service LoadBalancer internal, `loadBalancerIP` = reserved `10.0.1.33`. Values пишет Terraform (`local_file.write_traefik_values`) из `traefik-values.yaml.tftpl`. Отдельный `install-traefik.sh` не создаётся.
+- [x] vmks-values: IP = reserved internal IP Traefik (`local.traefik_ip`), values пишет Terraform (`local_file.write_vmks_values`) из `vmks-values.yaml.tftpl`. Плейсхолдер — `ingress_ip`. Отдельный `render-vmks-values.sh` не создаётся.
+- [x] `kibana.yaml`: удалить Middleware `kibana-auth` и annotation `router.middlewares`. Host по-прежнему `kibana.INGRESS_IP.sslip.io` (подстановка internal IP).
+- [x] `apply-eck.sh`: убрать `KIBANA_INGRESS_PASSWORD`, `htpasswd`, secret `kibana-basic-auth`. `INGRESS_IP` = `terraform output -raw traefik_ip` (reserved internal IP Traefik), не kubectl. `NLB_SUBNET_ID` = `terraform output -raw nlb_subnet_id`; `ES_NLB_IP` = `terraform output -raw es_nlb_ip`.
 
 ---
 
@@ -103,17 +103,17 @@
 
 **Files:** `README.md`, `INFRASTRUCTURE.md`, `AGENTS.md`
 
-- [ ] README шаг 0: apply → SSH за ключом → `tailscale up --login-server=https://headscale.<PIP>.sslip.io --auth-key=... --accept-routes` → `yc ... --internal --force` → `./scripts/install-traefik.sh` → `./scripts/render-vmks-values.sh` → helm vmks **0.92.1**. Grafana/Kibana URL из internal IP. SSH Rally на `rally_internal_ip`. Убрать htpasswd, публичный Rally, `--external`, Traefik из apply.
-- [ ] INFRASTRUCTURE.md: Headscale VM, единственный публичный IP, Traefik helm CLI internal, vmks 0.92.1, Rally без NAT.
-- [ ] AGENTS.md: `--version 0.92.1`.
+- [x] README шаг 0: `export TF_VAR_folder_id` → apply → `tailscale up` (канон — `terraform output -raw headscale_login_command`) → `yc ... --internal --force` → helm Traefik → helm vmks **0.92.1**. Grafana/Kibana URL из internal IP. SSH Rally на `rally_internal_ip`. Убрать htpasswd, публичный Rally, `--external`, Traefik из apply.
+- [x] INFRASTRUCTURE.md: Headscale VM, единственный публичный IP, Traefik helm CLI internal, vmks 0.92.1, Rally без NAT.
+- [x] AGENTS.md: `--version 0.92.1`.
 
 ---
 
 ### Task 6: Проверка (без полного apply в CI)
 
-- [ ] `terraform fmt -check` / `terraform validate` (нужен `terraform init` после удаления helm).
-- [ ] Гrep: нет `--external`, `helm_release`, `kibana_ingress_password`, `basicAuth`, `nat = true` у Rally, `public_ip = true`.
-- [ ] Гrep: есть `public_ip = false`, Headscale 0.29.3, Traefik 41.6.0, vmks 0.92.1, `wait_lb_release`, `yandex_vpc_address.ingress` на Headscale VM.
+- [x] `terraform fmt -check` / `terraform validate` (нужен `terraform init` после удаления helm).
+- [x] Гrep: нет `--external`, `helm_release`, `kibana_ingress_password`, `basicAuth`, `nat = true` у Rally, `public_ip = true`.
+- [x] Гrep: есть `public_ip = false`, Headscale 0.29.3, Traefik 41.6.0, vmks 0.92.1, `wait_lb_release`, `yandex_vpc_address.ingress` на Headscale VM.
 - [ ] Ручной прогон после merge — по README, не в этом плане.
 
 ---
