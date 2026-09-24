@@ -158,7 +158,9 @@ export ES_URL=http://$(kubectl -n elastic get svc chaos-es-http -o jsonpath='{.s
 
 (IP NLB с ноутбука через kubectl; на VM подставьте тот же адрес.)
 
-Индекс: `osmlinestrings` (20 532 036 документов). `osmpolygons` и `osmmultilinestrings` в challenge закомментированы и не заливаются — их корпуса не скачиваются. 1 primary, 2 replica — challenge/track-params. Challenge `append-no-conflicts-big`. `mvt-grid` в архиве трека нет. Трек разворачивается из архива `rally-tracks-nomvt-8500-v3.tar.gz` (cloud-init), заливаемого в S3; `base-url` корпусов `geoshape` указывает на S3, а не на `rally-tracks.elastic.co`.
+Индекс: `osmlinestrings` (20 532 036 документов). `osmpolygons` и `osmmultilinestrings` в challenge закомментированы и не заливаются — их корпуса не скачиваются. 1 primary, 2 replica — challenge/track-params. Challenge `append-no-conflicts-big`. `mvt-grid` в архиве трека нет. Трек разворачивается из архива `rally-tracks-nomvt-8500-v4.tar.gz` (cloud-init), заливаемого в S3; `base-url` корпусов `geoshape` указывает на S3, а не на `rally-tracks.elastic.co`.
+
+`force-merge-linestrings` идёт в режиме `mode: polling` (`poll-period: 10`): вместо одной многоминутной HTTP-запроски — запуск задачи и короткие опросы `tasks.get`. Иначе обрыв соединения (pod-kill, `disable-zones`) валит `race` целиком. Вместе с `--on-error=continue-on-network` (см. ниже) сетевые обрывы не прерывают прогон — они попадают в error-rate.
 
 Агент `script-runner` стартует заливку в фоне, затем сразу цикл хаоса:
 
@@ -171,6 +173,7 @@ nohup esrally race --track=geoshape --pipeline=benchmark-only \
   --target-hosts="\${ES_URL#http://}" \
   --track-params='number_of_shards:1,number_of_replicas:2' \
   --challenge=append-no-conflicts-big \
+  --on-error=continue-on-network \
   > ~/rally-ingest.log 2>&1 &
 echo \$! > ~/rally-ingest.pid
 EOF
@@ -201,7 +204,7 @@ NetworkChaos по смыслу эксперимента — деградация
 После ingest:
 
 - `scripts/check-count.sh` — `_count` индекса vs accepted bulk. Переменные: `ES_URL` (умолч. `http://127.0.0.1:9200`), `INDEX` (умолч. `osmlinestrings`); аргумент `$1` — число успешно принятых bulk из отчёта Rally.
-- `scripts/sample-mget.sh` — выборка id из id-лога и проверка наличия документов. Переменные: `ES_URL`, `INDEX`, `ID_LOG` (умолч. `$HOME/id-log/bulk-ids.txt`); аргумент `$1` — размер выборки N (умолч. 20). **Надо перепроверить:** кто пишет `bulk-ids.txt` — в репозитории видно только `mkdir` каталога `~/id-log` в cloud-init, сам файл, судя по всему, пишет трек `rally-tracks-nomvt-8500-v3.tar.gz`.
+- `scripts/sample-mget.sh` — выборка id из id-лога и проверка наличия документов. Переменные: `ES_URL`, `INDEX`, `ID_LOG` (умолч. `$HOME/id-log/bulk-ids.txt`); аргумент `$1` — размер выборки N (умолч. 20). **Надо перепроверить:** кто пишет `bulk-ids.txt` — в репозитории видно только `mkdir` каталога `~/id-log` в cloud-init, сам файл, судя по всему, пишет трек `rally-tracks-nomvt-8500-v4.tar.gz`.
 
 Стоп-кран: убить Rally, `restore-zone-b.sh`, снять Chaos CR.
 
