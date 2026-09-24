@@ -50,8 +50,4 @@ vmks-values.yaml
 traefik-values.yaml
 chaos-mesh-values.yaml
 
-*.deb
-documents.json.bz2
-rally-tracks-nomvt-8500-v2.tar.gz
-rally-tracks-nomvt-8500-v3.tar.gz
 rally-tracks-nomvt-8500-v4.tar.gz
