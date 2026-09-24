@@ -55,14 +55,29 @@ check_nlb() {
     exit 1
   fi
 
-  local shifted
-  shifted="$(yc load-balancer network-load-balancer target-states "$nlb_id" --format json | jq -r --arg ip "$IP" '
-    (if type == "array" then . else (.target_states // .targetStates // []) end) as $t
-    | ([ $t[] | select(.address == $ip) ]) as $m
-    | if ($m | length) == 0 then "missing"
-      elif ([ $m[] | select((.zone_shifted // .zoneShifted // false) != true) ] | length) > 0 then "not_shifted"
-      else "ok" end
-  ')"
+  local tg_ids tg_id shifted
+  tg_ids="$(jq -r '
+    (if type == "array" then .[0] else . end)
+    | (.attached_target_groups // .attachedTargetGroups // [])
+    | .[].target_group_id
+  ' <<<"$nlb")"
+  if [ -z "$tg_ids" ]; then
+    echo "${name} ${nlb_id}: нет attached target groups" >&2
+    exit 1
+  fi
+
+  shifted="not_found"
+  while IFS= read -r tg_id; do
+    [ -z "$tg_id" ] && continue
+    shifted="$(yc load-balancer network-load-balancer target-states "$nlb_id" --target-group-id "$tg_id" --format json | jq -r --arg ip "$IP" '
+      (if type == "array" then . else (.target_states // .targetStates // []) end) as $t
+      | ([ $t[] | select(.address == $ip) ]) as $m
+      | if ($m | length) == 0 then "missing"
+        elif ([ $m[] | select((.zone_shifted // .zoneShifted // false) != true) ] | length) > 0 then "not_shifted"
+        else "ok" end
+    ')"
+    [ "$shifted" = "ok" ] && break
+  done <<<"$tg_ids"
   if [ "$shifted" != "ok" ]; then
     echo "${name} ${nlb_id}: target ${IP} — ${shifted}, ожидался zone_shifted=true" >&2
     exit 1
