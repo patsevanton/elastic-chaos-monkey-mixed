@@ -37,6 +37,8 @@ terraform init
 terraform apply
 ```
 
+В Terraform явно закреплены внутренние адреса: Traefik `10.0.1.33` (Grafana, Kibana, Chaos Dashboard) и ES NLB `10.0.1.5`. После полного `terraform destroy` и нового `terraform apply` эти IP повторно запрашиваются из тех же подсетей. Если адрес уже занят другим ресурсом, apply остановится, а не выдаст другой IP. Перед изменением работающего стенда проверьте `terraform plan`: существующий адрес Traefik не должен заменяться. На текущем стенде `10.0.1.5` пока занят эфемерным адресом CCM; не применяйте создание нового reserved address поверх работающего ES NLB. Применяйте конфигурацию после штатного удаления стенда (CCM сначала удалит NLB); миграция без простоя здесь не предусмотрена. Публичный IP Headscale при destroy/apply не сохраняется.
+
 Ключ ноутбука и вход в tailnet:
 
 ```bash
@@ -54,11 +56,15 @@ helm upgrade --install traefik oci://ghcr.io/traefik/helm/traefik \
   --namespace traefik --create-namespace \
   --version 41.6.0 \
   -f traefik-values.yaml
+kubectl create namespace vmks --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f manifests/chaos-mesh/rbac.yaml
+kubectl -n vmks wait --for=jsonpath='{.data.token}' secret/chaos-mesh-admin-token --timeout=60s
 helm upgrade --install vmks \
     oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack \
     --namespace vmks --create-namespace \
     --wait --version 0.92.1 --timeout 15m \
     -f vmks-values.yaml
+kubectl apply -f manifests/exporter/traefik-scrape.yaml
 ```
 
 Grafana и Kibana: `terraform output grafana_url` / `kibana_url`. Логин Kibana: `terraform output kibana_user`. Пароли: `terraform output grafana_admin_password_command` / `kibana_elastic_password_command`. Пароль Grafana:
@@ -82,7 +88,7 @@ helm upgrade --install elastic-operator elastic/eck-operator \
 kubectl apply -f manifests/exporter/elasticsearch-exporter.yaml
 ```
 
-Internal NLB: `kubectl -n elastic get svc chaos-es-http`. Kibana — Ingress без basic auth. Если Kibana показывает свой логин — пользователь `elastic`, пароль:
+Internal NLB ES `10.0.1.5:9200`: на него идёт нагрузка с Rally VM, внутри кластера Kibana и exporter используют ClusterIP сервиса `chaos-es-http`. Kibana — Ingress без basic auth. Если Kibana показывает свой логин — пользователь `elastic`, пароль:
 
 ```bash
 kubectl -n elastic get secret chaos-es-elastic-user -o jsonpath='{.data.elastic}' | base64 -d; echo
@@ -105,13 +111,17 @@ helm repo add chaos-mesh https://charts.chaos-mesh.org
 helm upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
   --namespace chaos-mesh --create-namespace \
   --version 2.8.4 \
-  --set chaosDaemon.runtime=containerd \
-  --set chaosDaemon.socketPath=/run/containerd/containerd.sock \
-  --set controllerManager.replicaCount=3
+  -f chaos-mesh-values.yaml
 kubectl apply -f manifests/exporter/chaos-mesh-scrape.yaml
 ```
 
-Дашборды Elasticsearch (mixin экспортёра v1.9.0) и Chaos Mesh Overview chart vmks качает сам: `defaultDashboards.sources` в `vmks-values.yaml`. В Grafana у обоих выбрать datasource VictoriaMetrics. У Chaos Mesh Overview: Namespace `chaos-mesh`.
+Chaos Dashboard: `terraform output chaos_dashboard_url`. Войти с токеном ServiceAccount из namespace `vmks`:
+
+```bash
+kubectl -n vmks get secret chaos-mesh-admin-token -o jsonpath='{.data.token}' | base64 -d; echo
+```
+
+Grafana provision-ит datasource `Chaos Mesh` с тем же токеном из Secret: через Explore доступны события экспериментов (`Applied`, `Recovered`, ошибки) из API Dashboard. Отдельный дашборд для событий не нужен. Из внешних дашбордов vmks скачивает Elasticsearch Exporter Cluster (mixin v1.9.0), Elasticsearch Exporter Quickstart (14191) и Traefik Official Kubernetes (`defaultDashboards.sources` в `vmks-values.yaml.tftpl`). У двух последних datasource выбирается переменной Prometheus: VictoriaMetrics. Quickstart использует старые панели `graph`/`singlestat`, которые Grafana мигрирует при загрузке; внешний вид проверьте после установки. Для Traefik метрики собираются с сервиса `traefik-metrics` через VMServiceScrape.
 
 ## Шаг 3. Заливка и хаос одновременно
 

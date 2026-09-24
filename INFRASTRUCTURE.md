@@ -10,7 +10,7 @@ Service account: `elastic-chaos-monkey`.
 
 ## Traefik
 
-На apply Terraform пишет [traefik-values.yaml](traefik-values.yaml) из [traefik-values.yaml.tftpl](traefik-values.yaml.tftpl) (`traefik-values.yaml` в `.gitignore`). После `tailscale up` helm CLI: chart **41.6.0**, `-f traefik-values.yaml` — команда в [README.md](README.md). Grafana и Kibana — `*.<INTERNAL_NLB_IP>.sslip.io`.
+На apply Terraform пишет [traefik-values.yaml](traefik-values.yaml) из [traefik-values.yaml.tftpl](traefik-values.yaml.tftpl) (`traefik-values.yaml` в `.gitignore`). После `tailscale up` helm CLI: chart **41.6.0**, `-f traefik-values.yaml` — команда в [README.md](README.md). Reserved internal IP Traefik закреплён в `ip-dns.tf` как `10.0.1.33`, Ingress Grafana, Kibana и Chaos Dashboard — `*.<INTERNAL_NLB_IP>.sslip.io`. Метрики Traefik выдаёт отдельный сервис `traefik-metrics`.
 
 ## VictoriaMetrics K8s Stack
 
@@ -22,6 +22,10 @@ Service account: `elastic-chaos-monkey`.
 - scrape-job и recording-правила control-plane Yandex Managed K8s выключены
 
 Стек ставится helm CLI **0.92.1** — команда в [README.md](README.md).
+
+`vmks` содержит SA `chaos-mesh-admin` и Secret с токеном для Chaos Dashboard. Grafana получает этот токен через `secretKeyRef`, устанавливает `chaosmeshorg-datasource` 3.0.0 и provision-ит datasource `Chaos Mesh` для просмотра событий; токен не записывается в Terraform values. Chaos Mesh chart **2.8.4** получает [chaos-mesh-values.yaml](chaos-mesh-values.yaml) из [chaos-mesh-values.yaml.tftpl](chaos-mesh-values.yaml.tftpl): Dashboard Ingress Traefik `chaos-dashboard.10.0.1.33.sslip.io`.
+
+ES NLB `chaos-es-http` использует закреплённый в `ip-dns.tf` reserved internal IP `10.0.1.5`; ECK Service запрашивает его через `loadBalancerIP`. Снаружи кластера к NLB ходит Rally VM, а Kibana/exporter ходят на ClusterIP. При полном `terraform destroy` оба reserved internal IP освобождаются, после `terraform apply` снова запрашиваются по тем же адресам. Текущий `10.0.1.5` занят эфемерным адресом работающего CCM NLB; переход на reserved address выполнять после штатного destroy, не поверх работающего NLB.
 
 ## Rally VM
 

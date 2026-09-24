@@ -48,6 +48,7 @@ terraform.rc
 # Values-файлы, сгенерированные Terraform из *.yaml.tftpl
 vmks-values.yaml
 traefik-values.yaml
+chaos-mesh-values.yaml
 
 *.deb
 documents.json.bz2

@@ -1,0 +1,15 @@
+chaosDaemon:
+  runtime: containerd
+  socketPath: /run/containerd/containerd.sock
+controllerManager:
+  replicaCount: 3
+dashboard:
+  rootUrl: http://chaos-dashboard.${ingress_ip}.sslip.io
+  ingress:
+    enabled: true
+    apiVersionOverrides: networking.k8s.io/v1
+    ingressClassName: traefik
+    annotations:
+      traefik.ingress.kubernetes.io/router.entrypoints: web
+    hosts:
+      - name: chaos-dashboard.${ingress_ip}.sslip.io

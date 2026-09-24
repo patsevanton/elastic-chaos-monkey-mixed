@@ -17,3 +17,7 @@ service:
   spec:
     type: LoadBalancer
     loadBalancerIP: ${traefik_ip}
+metrics:
+  prometheus:
+    service:
+      enabled: true

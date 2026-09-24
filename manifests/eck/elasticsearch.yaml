@@ -16,6 +16,7 @@ spec:
           yandex.cloud/subnet-id: NLB_SUBNET_ID
       spec:
         type: LoadBalancer
+        loadBalancerIP: ES_NLB_IP
   nodeSets:
     - name: zone-a
       count: 1

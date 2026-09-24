@@ -1,5 +1,15 @@
 grafana:
   replicas: 1
+  plugins:
+    - chaosmeshorg-datasource 3.0.0
+  grafana.ini:
+    plugins:
+      allow_loading_unsigned_plugins: chaosmeshorg-datasource
+  envValueFrom:
+    CHAOS_MESH_TOKEN:
+      secretKeyRef:
+        name: chaos-mesh-admin-token
+        key: token
   ingress:
     enabled: true
     ingressClassName: traefik
@@ -12,20 +22,32 @@ defaultDashboards:
   sources:
     elasticsearch-exporter-cluster:
       url: https://raw.githubusercontent.com/prometheus-community/elasticsearch_exporter/v1.9.0/elasticsearch-mixin/compiled/dashboards/cluster.json
-    chaos-mesh-overview:
-      url: https://grafana.com/api/dashboards/15918/revisions/1/download
+    elasticsearch-exporter-quickstart:
+      url: https://grafana.com/api/dashboards/14191/revisions/1/download
+    traefik-kubernetes:
+      url: https://raw.githubusercontent.com/traefik/traefik/v3.7.13/contrib/grafana/traefik-kubernetes.json
 
 defaultDatasources:
   victoriametrics:
     datasources:
       - name: VictoriaMetrics
         type: prometheus
+        uid: VictoriaMetrics
         access: proxy
         isDefault: true
         jsonData:
           httpMethod: POST
           queryTimeout: 300s
           timeInterval: 30s
+  extra:
+    - name: Chaos Mesh
+      type: chaosmeshorg-datasource
+      access: proxy
+      url: http://chaos-dashboard.chaos-mesh.svc.cluster.local:2333
+      jsonData:
+        httpHeaderName1: Authorization
+      secureJsonData:
+        httpHeaderValue1: 'Bearer $CHAOS_MESH_TOKEN'
 
 defaultRules:
   groups:

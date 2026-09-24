@@ -9,6 +9,15 @@ resource "yandex_vpc_address" "traefik" {
   name = "elastic-chaos-traefik-internal"
   internal_ipv4_address {
     subnet_id = yandex_vpc_subnet.elastic_chaos_a.id
+    address   = "10.0.1.33"
+  }
+}
+
+resource "yandex_vpc_address" "es_nlb" {
+  name = "elastic-chaos-es-nlb-internal"
+  internal_ipv4_address {
+    subnet_id = yandex_vpc_subnet.elastic_chaos_a.id
+    address   = "10.0.1.5"
   }
 }
 
@@ -22,5 +31,6 @@ resource "time_sleep" "wait_lb_release" {
   depends_on = [
     yandex_vpc_address.ingress,
     yandex_vpc_address.traefik,
+    yandex_vpc_address.es_nlb,
   ]
 }

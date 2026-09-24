@@ -6,6 +6,9 @@ locals {
     nlb_subnet_id = local.subnet_a_id
     traefik_ip    = local.traefik_ip
   })
+  chaos_mesh_values = templatefile("${path.module}/chaos-mesh-values.yaml.tftpl", {
+    ingress_ip = local.traefik_ip
+  })
 }
 
 resource "local_file" "write_vmks_values" {
@@ -20,6 +23,12 @@ resource "local_file" "write_traefik_values" {
   file_permission = "0644"
 }
 
+resource "local_file" "write_chaos_mesh_values" {
+  content         = local.chaos_mesh_values
+  filename        = "${path.module}/chaos-mesh-values.yaml"
+  file_permission = "0644"
+}
+
 output "grafana_url" {
   description = "URL Grafana (FQDN из internal IP Traefik через sslip.io)"
   value       = "http://grafana.${local.traefik_ip}.sslip.io"
@@ -28,6 +37,16 @@ output "grafana_url" {
 output "kibana_url" {
   description = "URL Kibana (FQDN из internal IP Traefik через sslip.io)"
   value       = "http://kibana.${local.traefik_ip}.sslip.io"
+}
+
+output "chaos_dashboard_url" {
+  description = "URL Chaos Mesh Dashboard (internal Traefik NLB)"
+  value       = "http://chaos-dashboard.${local.traefik_ip}.sslip.io"
+}
+
+output "es_nlb_ip" {
+  description = "Reserved internal IP Elasticsearch NLB"
+  value       = yandex_vpc_address.es_nlb.internal_ipv4_address[0].address
 }
 
 output "kibana_user" {
