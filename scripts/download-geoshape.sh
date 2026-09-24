@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 DIR="${1:-geoshape}"
-BASE="https://rally-tracks.elastic.co/geoshape"
+BASE="https://storage.yandexcloud.net/download-resources-for-apatsev"
 mkdir -p "$DIR"
 cd "$DIR"
 for f in linestrings.json.bz2; do

@@ -87,7 +87,7 @@ write_files:
       }
       mkdir -p "$DATA/linestrings"
       fetch "$BASE/linestrings.json.bz2" "$DATA/linestrings/linestrings.json.bz2" 3698508764 12c02f175e1f74bd09f5ea73ef74f289883628f374c523e3422163d9469516ed || exit 1
-      # osmpolygons: корпус скачивается, ingest в challenge закомментирован
+      # osmpolygons/osmmultilinestrings: корпус не скачивается, ingest в challenge закомментирован
       # i=1
       # while [ "$i" -le "$TRIES" ]; do
       #   if fetch "$BASE/polygons.json.bz2.00" "$DATA/polygons/polygons.json.bz2.00" 4418558680 4839955f5426edda2d3fae67ae42e34b9fa059ddb43de0de1cbad0b9f2a7dbad \
@@ -107,11 +107,14 @@ write_files:
 runcmd:
   - mkdir -p /home/ubuntu/id-log /home/ubuntu/.rally/benchmarks/tracks
   - /usr/local/bin/fetch-rally-corpora.sh
-  - curl -fL --retry 5 --retry-delay 5 -o /tmp/rally-tracks-nomvt-8500.tar.gz https://storage.yandexcloud.net/download-resources-for-apatsev/rally-tracks-nomvt-8500.tar.gz
-  - tar -xzf /tmp/rally-tracks-nomvt-8500.tar.gz -C /tmp
+  # v3: geoshape/append-no-conflicts-big заливает только osmlinestrings
+  # (ingest osmmultilinestrings/osmpolygons закомментирован — их корпуса не скачиваются);
+  # base-url корпусов geoshape перенесён с rally-tracks.elastic.co на S3.
+  - curl -fL --retry 5 --retry-delay 5 -o /tmp/rally-tracks-nomvt-8500-v3.tar.gz https://storage.yandexcloud.net/download-resources-for-apatsev/rally-tracks-nomvt-8500-v3.tar.gz
+  - tar -xzf /tmp/rally-tracks-nomvt-8500-v3.tar.gz -C /tmp
   - rm -rf /home/ubuntu/.rally/benchmarks/tracks/default
   - mv /tmp/rally-tracks /home/ubuntu/.rally/benchmarks/tracks/default
-  - rm -f /tmp/rally-tracks-nomvt-8500.tar.gz
+  - rm -f /tmp/rally-tracks-nomvt-8500-v3.tar.gz
   - chown -R ubuntu:ubuntu /home/ubuntu
   - sudo -u ubuntu git -C /home/ubuntu/.rally/benchmarks/tracks/default remote remove origin
   - sudo -u ubuntu python3 -m venv /home/ubuntu/venv

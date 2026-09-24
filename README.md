@@ -149,7 +149,7 @@ export ES_URL=http://$(kubectl -n elastic get svc chaos-es-http -o jsonpath='{.s
 
 (IP NLB с ноутбука через kubectl; на VM подставьте тот же адрес.)
 
-Индекс: `osmlinestrings` (20 532 036 документов). `osmpolygons` в challenge закомментирован и не заливается. 1 primary, 2 replica — challenge/track-params. Challenge `append-no-conflicts-big`. `mvt-grid` в архиве трека нет.
+Индекс: `osmlinestrings` (20 532 036 документов). `osmpolygons` и `osmmultilinestrings` в challenge закомментированы и не заливаются — их корпуса не скачиваются. 1 primary, 2 replica — challenge/track-params. Challenge `append-no-conflicts-big`. `mvt-grid` в архиве трека нет. Трек разворачивается из архива `rally-tracks-nomvt-8500-v3.tar.gz` (cloud-init), заливаемого в S3; `base-url` корпусов `geoshape` указывает на S3, а не на `rally-tracks.elastic.co`.
 
 Агент `script-runner` стартует заливку в фоне, затем сразу цикл хаоса:
 
