@@ -22,9 +22,16 @@ if [ -z "$ZONE" ] || [ -z "$NG_NAME" ] || [ -z "$NLB_ES_ID" ] || [ -z "$NLB_TRAE
   exit 1
 fi
 
-echo "restore ng=$NG_NAME sg=[${SG_IDS}] nlb_es=$NLB_ES_ID nlb_traefik=$NLB_TRAEFIK_ID"
+SUBNET_IDS="$(yc managed-kubernetes node-group get "$NG_NAME" --format json \
+  | jq -r '.node_template.network_interface_specs[0].subnet_ids // [] | join(",")')"
 
-yc managed-kubernetes node-group update "$NG_NAME" --network-interface "security-group-ids=[${SG_IDS}]"
+echo "restore ng=$NG_NAME sg=[${SG_IDS}] subnets=[${SUBNET_IDS}] nlb_es=$NLB_ES_ID nlb_traefik=$NLB_TRAEFIK_ID"
+
+if [ -n "$SG_IDS" ]; then
+  yc managed-kubernetes node-group update "$NG_NAME" --network-interface "subnets=${SUBNET_IDS},security-group-ids=[${SG_IDS}]"
+else
+  yc managed-kubernetes node-group update "$NG_NAME" --network-interface "subnets=${SUBNET_IDS}"
+fi
 yc load-balancer network-load-balancer enable-zones --id "$NLB_ES_ID" --zones "$ZONE"
 yc load-balancer network-load-balancer enable-zones --id "$NLB_TRAEFIK_ID" --zones "$ZONE"
 

@@ -14,12 +14,24 @@ snapshot() {
   done
 }
 
-CURRENT_SG_IDS="$(yc managed-kubernetes node-group get "$NG_NAME" --format json \
-  | jq -r '.node_template.network_interface_specs[0].security_group_ids // [] | join(",")')"
+NG_JSON="$(yc managed-kubernetes node-group get "$NG_NAME" --format json)"
+CURRENT_SG_IDS="$(jq -r '.node_template.network_interface_specs[0].security_group_ids // [] | join(",")' <<<"$NG_JSON")"
+SUBNET_IDS="$(jq -r '.node_template.network_interface_specs[0].subnet_ids // [] | join(",")' <<<"$NG_JSON")"
+
+set_ng_sg() {
+  local sg_csv="$1"
+  if [ -n "$sg_csv" ]; then
+    yc managed-kubernetes node-group update "$NG_NAME" \
+      --network-interface "subnets=${SUBNET_IDS},security-group-ids=[${sg_csv}]"
+  else
+    yc managed-kubernetes node-group update "$NG_NAME" \
+      --network-interface "subnets=${SUBNET_IDS}"
+  fi
+}
 
 restore() {
   echo "restore ${NG_NAME} sg=[${CURRENT_SG_IDS}]"
-  yc managed-kubernetes node-group update "$NG_NAME" --network-interface "security-group-ids=[${CURRENT_SG_IDS}]"
+  set_ng_sg "$CURRENT_SG_IDS"
 }
 trap restore EXIT
 
@@ -28,7 +40,7 @@ echo "before:"
 echo "$BEFORE"
 
 echo "apply sg ${SG_ID} on ${NG_NAME}"
-yc managed-kubernetes node-group update "$NG_NAME" --network-interface "security-group-ids=[${SG_ID}]"
+set_ng_sg "$SG_ID"
 
 AFTER=""
 for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18; do

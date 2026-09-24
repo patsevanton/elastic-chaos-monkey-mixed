@@ -13,8 +13,9 @@ NODE="$(kubectl get nodes -l topology.kubernetes.io/zone=$ZONE -o jsonpath='{.it
 INSTANCE_ID="$(kubectl get node "$NODE" -o jsonpath='{.spec.providerID}')"
 INSTANCE_ID="${INSTANCE_ID##*/}"
 
-CURRENT_SG_IDS="$(yc managed-kubernetes node-group get "$NG_NAME" --format json \
-  | jq -r '.node_template.network_interface_specs[0].security_group_ids // [] | join(",")')"
+NG_JSON="$(yc managed-kubernetes node-group get "$NG_NAME" --format json)"
+CURRENT_SG_IDS="$(jq -r '.node_template.network_interface_specs[0].security_group_ids // [] | join(",")' <<<"$NG_JSON")"
+SUBNET_IDS="$(jq -r '.node_template.network_interface_specs[0].subnet_ids // [] | join(",")' <<<"$NG_JSON")"
 
 ES_IP="$(kubectl -n elastic get svc chaos-es-http -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
 TRAEFIK_IP="$(kubectl -n traefik get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
@@ -47,7 +48,7 @@ EOF
 echo "state: $STATE_FILE"
 echo "isolate instance=$INSTANCE_ID ng=$NG_NAME sg=$SG_ID nlb_es=$NLB_ES_ID nlb_traefik=$NLB_TRAEFIK_ID"
 
-yc managed-kubernetes node-group update "$NG_NAME" --network-interface "security-group-ids=[${SG_ID}]"
+yc managed-kubernetes node-group update "$NG_NAME" --network-interface "subnets=${SUBNET_IDS},security-group-ids=[${SG_ID}]"
 yc load-balancer network-load-balancer disable-zones --id "$NLB_ES_ID" --zones "$ZONE"
 yc load-balancer network-load-balancer disable-zones --id "$NLB_TRAEFIK_ID" --zones "$ZONE"
 
