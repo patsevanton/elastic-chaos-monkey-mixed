@@ -53,9 +53,7 @@ hold() {
 report() {
   echo "--- report ---"
   kubectl --context app -n load exec deploy/loadgen -- wget -qO- http://127.0.0.1:8080/metrics | awk '/^loadgen_(bulk|search)_(ok|err)_total /{print}'
-  local es
-  es="$(terraform output -raw elastic_url)"
-  curl -sf "$es/load/_count" || true
+  kubectl --context elastic -n elastic exec elastic-es-master-a-0 -- curl -s http://localhost:9200/load/_count || true
   echo
 }
 
