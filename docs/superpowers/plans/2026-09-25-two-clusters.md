@@ -14,7 +14,7 @@
 
 - Kubernetes 1.33 и ingress-nginx не менять. Входа ingress-nginx нет, вход — Traefik chart 41.6.0.
 - Ноды k8s без публичного IP. Egress приватных подсетей — один NAT Gateway и route table.
-- Загрузочные диски нод и Headscale VM — HDD. Ноды preemptible.
+- Загрузочные диски нод — HDD. Ноды preemptible.
 - PVC Elasticsearch — `yc-network-ssd` 50 ГиБ. Это исключение из правила HDD. Ingress-nginx в кластере нет, вход — Traefik.
 - VictoriaMetrics только в namespace `vmks`. В values отключить scrape и recording-правила control-plane Yandex Managed K8s (etcd, scheduler, controller-manager, `kube-scheduler.rules`).
 - Зону изолировать и чинить только скриптами, не `yc compute instance stop` и не `terraform apply`.
@@ -73,7 +73,6 @@
 - `ip-dns.tf` — убрать `es_nlb`, добавить `10.0.1.34` и `10.0.1.35`
 - `locals.tf`, `net.tf` — убрать подсеть `e`
 - `monitoring.tf` и `*.tftpl` — два Traefik, Grafana на IP app
-- `cloud-init/headscale.yaml.tftpl` — убрать `10.0.4.0/24`
 - `manifests/eck/elasticsearch.yaml` — ClusterIP, имя `elastic`
 - `manifests/chaos/*.yaml` — зона параметром, `direction: both`, pod-kill на окно
 - `scripts/verify-ng-sg-swap.sh` — аргументы zone и node group, контекст kubectl
@@ -90,7 +89,7 @@
 ### Task 1: Сеть без подсети `e`, адреса NLB
 
 **Files:**
-- Modify: `net.tf`, `locals.tf`, `ip-dns.tf`, `cloud-init/headscale.yaml.tftpl`
+- Modify: `net.tf`, `locals.tf`, `ip-dns.tf`
 - Test: `terraform validate`
 
 **Interfaces:**
@@ -121,11 +120,7 @@ vminsert_ip        = yandex_vpc_address.vminsert.internal_ipv4_address[0].addres
 
 `traefik_ip` удалить. Все ссылки на `local.traefik_ip` в этой задаче не трогать — их закроет Task 4.
 
-- [ ] **Step 4: Headscale routes**
-
-В `cloud-init/headscale.yaml.tftpl` обе строки маршрутов заменить на `10.0.1.0/24,10.0.2.0/24,10.0.3.0/24`. Строку `10.0.4.0/24` удалить только там.
-
-- [ ] **Step 5: Проверка**
+- [ ] **Step 4: Проверка**
 
 Run: `terraform validate`
 Expected: Success. `terraform plan` не запускать без явной просьбы: план удалит Rally VM и подсеть `e`.
@@ -471,7 +466,7 @@ Expected: код 0.
 
 - [ ] **Step 3: INFRASTRUCTURE.md**
 
-Два кластера, ноды, IP `10.0.1.33/34/35`, маршруты Headscale без `10.0.4.0/24`. Изоляция: SG на node group зоны в обоих кластерах, `disable-zones` только NLB Traefik `elastic` и NLB `vminsert`. Восстановление возвращает SG и делает `enable-zones` на оба NLB.
+Два кластера, ноды, IP `10.0.1.33/34/35`. Изоляция: SG на node group зоны в обоих кластерах, `disable-zones` только NLB Traefik `elastic` и NLB `vminsert`. Восстановление возвращает SG и делает `enable-zones` на оба NLB.
 
 - [ ] **Step 4: README**
 

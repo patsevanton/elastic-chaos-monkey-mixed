@@ -116,3 +116,13 @@ output "kibana_elastic_password_command" {
   description = "Команда для получения пароля пользователя elastic в Kibana"
   value       = "kubectl --context elastic -n elastic get secret elastic-es-elastic-user -o jsonpath='{.data.elastic}' | base64 -d; echo"
 }
+
+output "public_ips" {
+  description = "Все публичные IP стенда"
+  value = {
+    app_cluster_api          = yandex_kubernetes_cluster.app.master[0].external_v4_address
+    elastic_cluster_api      = yandex_kubernetes_cluster.elastic_chaos.master[0].external_v4_address
+    traefik_app_public       = local.traefik_app_public_ip
+    traefik_elastic_public   = local.traefik_elastic_public_ip
+  }
+}

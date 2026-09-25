@@ -2,7 +2,7 @@
 
 Дата: 2026-09-24  
 Репозиторий: `elastic-chaos-monkey-mixed`  
-Заменяет концепцию [2026-09-18-elastic-chaos-monkey-mixed-design.md](2026-09-18-elastic-chaos-monkey-mixed-design.md) в части Rally и одного прогона зоны `b`. Доступ через Headscale (2026-09-19) сохраняется, маршрут `10.0.4.0/24` убирается.
+Заменяет концепцию одного кластера и одного прогона зоны `b`. Доступ с ноутбука — публичные IP внешних NLB Traefik и внешние endpoint API master.
 
 Формат: README = статья. Подход реализации: пошаговый стенд, хаос скриптом, не CI.
 
@@ -19,7 +19,7 @@
 
 Критерии: search жив, index жив, нет потери документов, которые bulk принял до сбоя. Порога «жив / не жив» по error-rate нет: в статье печатаем процент ошибок приложения.
 
-Доступ с ноутбука: k8s API обоих кластеров, Grafana и Kibana — только через Headscale. Публичный IP только у Headscale VM.
+Доступ с ноутбука: k8s API обоих кластеров — внешние endpoint master; Grafana, Kibana и Chaos Dashboard — публичные IP внешних NLB Traefik.
 
 ## Вне скоупа
 
@@ -32,7 +32,6 @@
 - Сравнение mixed vs dedicated, ECK vs Helm, второй ES-кластер.
 - Публичный Elasticsearch, TLS на HTTP ES.
 - Автотесты хаоса в CI.
-- Headscale в Kubernetes. Tailscale на нодах k8s. Policy / ACL Headscale.
 - Смена версии Kubernetes (остаётся 1.33) и ingress-nginx (его нет; вход — Traefik).
 - Состав полей документа — спросить в следующий раз. Размер документа уже задан: 2 КБ.
 
@@ -40,9 +39,7 @@
 
 ### Сеть
 
-Одна VPC. Подсети `10.0.1.0/24` (`a`), `10.0.2.0/24` (`b`), `10.0.3.0/24` (`d`) общие для обоих кластеров. Egress приватных подсетей — один NAT Gateway и route table. Подсеть Headscale `10.0.0.0/24` без route table.
-
-Подсеть `elastic-chaos-e` (`10.0.4.0/24`, `ru-central1-e`) удаляется: кроме Rally VM на ней ничего нет. Из advertise-routes и approve-routes Headscale убирается только `10.0.4.0/24`. Маршруты `10.0.1.0/24`–`10.0.3.0/24` остаются, иначе ноутбук теряет k8s API, Grafana и Kibana.
+Одна VPC. Подсети `10.0.1.0/24` (`a`), `10.0.2.0/24` (`b`), `10.0.3.0/24` (`d`) общие для обоих кластеров. Egress приватных подсетей — один NAT Gateway и route table.
 
 ### Kubernetes
 
@@ -56,11 +53,7 @@
 | es data | 8 vCPU / 16 ГБ, HDD |
 | app | 2 vCPU / 4 ГБ, HDD |
 
-Исключение из правила HDD: PVC Elasticsearch — `yc-network-ssd`. Ноды обоих кластеров и Headscale VM — HDD.
-
-### Headscale
-
-Без изменений относительно спеки 2026-09-19, кроме маршрута `10.0.4.0/24`. Один Headscale на оба кластера. Публичный IP только у Headscale VM.
+Исключение из правила HDD: PVC Elasticsearch — `yc-network-ssd`. Ноды обоих кластеров — HDD.
 
 ### Elasticsearch (ECK)
 
@@ -135,10 +128,9 @@ SG переключается только CLI (`isolate` / `restore`), не `te
 ## Потоки данных
 
 ```
-Ноутбук --Headscale--> 10.0.1.0/24 … 10.0.3.0/24
-  → internal API обоих кластеров
-  → internal NLB Traefik app (Grafana)
-  → internal NLB Traefik es (Kibana)
+Ноутбук --интернет--> публичные IP внешних NLB Traefik и внешние endpoint API master
+  → Grafana, Kibana, Chaos Dashboard
+  → kubectl API обоих кластеров
 
 app-под --VPC--> internal NLB Traefik es --> Elasticsearch ClusterIP :9200
 
@@ -174,7 +166,7 @@ Chaos Mesh CR: pod-kill, loss 30%, delay 500 мс — для приложени�
 
 ## Проверка стенда
 
-После apply и join в tailnet: три ноды `a/b/d` в каждом кластере; ES green, шарды по зонам; приложение 3/3 Ready; bulk и search идут через NLB Traefik es; remote write es-vmagent доходит до vminsert; Grafana в app-кластере видит метрики приложения и Elasticsearch.
+После apply: три ноды `a/b/d` в каждом кластере; ES green, шарды по зонам; приложение 3/3 Ready; bulk и search идут через NLB Traefik es; remote write es-vmagent доходит до vminsert; Grafana в app-кластере видит метрики приложения и Elasticsearch.
 
 Опыты — ручной прогон, не CI. Цифры результатов в README — плейсхолдеры до прогона.
 

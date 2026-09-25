@@ -15,7 +15,7 @@
 - Второй кластер Elasticsearch.
 - Смена версии Elasticsearch, ECK, Kubernetes, ingress.
 - Кластер `app`: размеры нод, число node group, приложение.
-- Traefik, Kibana, exporter, Headscale, порядок зон, длительность шагов.
+- Traefik, Kibana, exporter, порядок зон, длительность шагов.
 - Сравнение mixed vs dedicated как отдельный эксперимент. Эта спека заменяет mixed на dedicated.
 - Power-off VM.
 
