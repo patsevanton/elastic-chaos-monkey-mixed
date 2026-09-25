@@ -66,8 +66,8 @@ resource "yandex_kubernetes_node_group" "app_a" {
     }
 
     resources {
-      cores  = 2
-      memory = 4
+      cores  = 4
+      memory = 8
     }
 
     boot_disk {
@@ -110,8 +110,8 @@ resource "yandex_kubernetes_node_group" "app_b" {
     }
 
     resources {
-      cores  = 2
-      memory = 4
+      cores  = 4
+      memory = 8
     }
 
     boot_disk {
@@ -154,8 +154,8 @@ resource "yandex_kubernetes_node_group" "app_d" {
     }
 
     resources {
-      cores  = 2
-      memory = 4
+      cores  = 4
+      memory = 8
     }
 
     boot_disk {
