@@ -12,7 +12,7 @@
 
 | Компонент | Куда |
 |---|---|
-| Elasticsearch 9.5.4 master ×3 + data ×3 | кластер `elastic`, зоны `a`/`b`/`d`; data PVC **50 ГиБ** `yc-network-ssd`, heap 3 ГиБ; master без PVC, heap 1 ГиБ |
+| Elasticsearch 9.5.4 master ×3 + data ×6 | кластер `elastic`, зоны `a`/`b`/`d`, data по 2 на зону; data PVC **50 ГиБ** `yc-network-ssd`, heap 3 ГиБ; master без PVC, heap 1 ГиБ |
 | Kibana 9.5.4 ×3 | публичный NLB Traefik, `kibana.<IP>.sslip.io` |
 | loadgen ×3 | кластер `app`, spread по зонам |
 | vmks 0.92.1 | `app` и `elastic`, namespace `vmks` |

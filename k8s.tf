@@ -200,7 +200,7 @@ resource "yandex_kubernetes_node_group" "elastic_data_a" {
 
   scale_policy {
     fixed_scale {
-      size = 1
+      size = 2
     }
   }
 
@@ -244,7 +244,7 @@ resource "yandex_kubernetes_node_group" "elastic_data_b" {
 
   scale_policy {
     fixed_scale {
-      size = 1
+      size = 2
     }
   }
 
@@ -288,7 +288,7 @@ resource "yandex_kubernetes_node_group" "elastic_data_d" {
 
   scale_policy {
     fixed_scale {
-      size = 1
+      size = 2
     }
   }
 
