@@ -30,8 +30,9 @@ service:
     loadBalancerIP: ${traefik_ip}
   additionalServices:
     public:
-      type: LoadBalancer
-      loadBalancerIP: ${public_ip}
+      spec:
+        type: LoadBalancer
+        loadBalancerIP: ${public_ip}
 metrics:
   prometheus:
     service:
