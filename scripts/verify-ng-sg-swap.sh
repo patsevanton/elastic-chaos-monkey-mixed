@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ZONE="ru-central1-b"
-NG_NAME="elastic-chaos-b"
-SG_ID="${1:?usage: verify-ng-sg-swap.sh <isolation-sg-id>}"
+SG_ID="${1:?usage: verify-ng-sg-swap.sh <isolation-sg-id> <zone> <node-group>}"
+ZONE="${2:?zone}"
+NG_NAME="${3:?node-group}"
 
 snapshot() {
   kubectl get nodes -l topology.kubernetes.io/zone=$ZONE -o json | jq -r '
@@ -56,10 +56,10 @@ echo "$AFTER"
 
 if [ "$AFTER" = "$BEFORE" ]; then
   echo "VERDICT: HOT-SWAP — узел не пересоздан, SG сменён на живой VM."
-  echo "Используем node-group update в isolate-zone-b.sh."
+  echo "Используем node-group update в isolate-zone.sh."
 else
   echo "VERDICT: RECREATE — узел пересоздан (name/uid/instance_id/created_at изменились)."
   echo "Node-group update НЕ подходит для network partition — нужен вариант C:"
   echo "  yc compute instance update-network-interface --network-interface-index 0 --security-group-id <sg>"
-  echo "И переписать isolate-zone-b.sh / restore-zone-b.sh на работу с VM."
+  echo "И переписать isolate-zone.sh / restore-zone.sh на работу с VM."
 fi

@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: load
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+  namespace: load
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: loadgen
+  template:
+    metadata:
+      labels:
+        app: loadgen
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: loadgen
+      containers:
+        - name: loadgen
+          image: {{ .Values.image }}
+          args: ["-es", {{ .Values.esURL | quote }}]
+          ports:
+            - name: metrics
+              containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loadgen
+  namespace: load
+  labels:
+    app: loadgen
+spec:
+  selector:
+    app: loadgen
+  ports:
+    - name: metrics
+      port: 8080
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: loadgen
+  namespace: load
+spec:
+  selector:
+    matchLabels:
+      app: loadgen
+  endpoints:
+    - port: metrics

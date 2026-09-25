@@ -1,5 +1,5 @@
 ---
-description: Запускает простые скрипты репозитория — esrally, kubectl apply/delete Chaos, isolate-zone-b.sh, restore-zone-b.sh, chaos-loop.sh. Не анализирует и не проверяет результат.
+description: Запускает простые скрипты репозитория — kubectl apply/delete Chaos, isolate-zone.sh, restore-zone.sh, chaos-run.sh. Не анализирует и не проверяет результат.
 mode: subagent
 model: openai/gpt-6-luna-pro
 permission:

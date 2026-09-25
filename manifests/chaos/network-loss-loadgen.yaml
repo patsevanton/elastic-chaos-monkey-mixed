@@ -1,8 +1,8 @@
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
-  name: es-network-loss
-  namespace: elastic
+  name: loadgen-network-loss
+  namespace: load
 spec:
   action: loss
   mode: all
@@ -10,9 +10,9 @@ spec:
   direction: both
   selector:
     namespaces:
-      - elastic
+      - load
     labelSelectors:
-      elasticsearch.k8s.elastic.co/cluster-name: elastic
+      app: loadgen
     nodeSelectors:
       topology.kubernetes.io/zone: ${ZONE}
   loss:

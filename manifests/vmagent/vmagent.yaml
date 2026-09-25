@@ -1,0 +1,10 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAgent
+metadata:
+  name: es
+  namespace: elastic
+spec:
+  remoteWrite:
+    - url: http://10.0.1.35:8480/insert/0/prometheus
+  serviceScrapeSelector: {}
+  serviceScrapeNamespaceSelector: {}

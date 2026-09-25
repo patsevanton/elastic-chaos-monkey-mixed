@@ -1,13 +1,13 @@
 apiVersion: kibana.k8s.elastic.co/v1
 kind: Kibana
 metadata:
-  name: chaos
+  name: elastic
   namespace: elastic
 spec:
   version: 9.5.4
   count: 3
   elasticsearchRef:
-    name: chaos
+    name: elastic
   http:
     tls:
       selfSignedCertificate:
@@ -20,4 +20,4 @@ spec:
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
-              kibana.k8s.elastic.co/name: chaos
+              kibana.k8s.elastic.co/name: elastic

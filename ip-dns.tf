@@ -6,18 +6,26 @@ resource "yandex_vpc_address" "ingress" {
 }
 
 resource "yandex_vpc_address" "traefik" {
-  name = "elastic-chaos-traefik-internal"
+  name = "elastic-traefik-internal"
   internal_ipv4_address {
     subnet_id = yandex_vpc_subnet.elastic_chaos_a.id
     address   = "10.0.1.33"
   }
 }
 
-resource "yandex_vpc_address" "es_nlb" {
-  name = "elastic-chaos-es-nlb-internal"
+resource "yandex_vpc_address" "traefik_app" {
+  name = "app-traefik-internal"
   internal_ipv4_address {
     subnet_id = yandex_vpc_subnet.elastic_chaos_a.id
-    address   = "10.0.1.5"
+    address   = "10.0.1.34"
+  }
+}
+
+resource "yandex_vpc_address" "vminsert" {
+  name = "app-vminsert-internal"
+  internal_ipv4_address {
+    subnet_id = yandex_vpc_subnet.elastic_chaos_a.id
+    address   = "10.0.1.35"
   }
 }
 
@@ -31,6 +39,7 @@ resource "time_sleep" "wait_lb_release" {
   depends_on = [
     yandex_vpc_address.ingress,
     yandex_vpc_address.traefik,
-    yandex_vpc_address.es_nlb,
+    yandex_vpc_address.traefik_app,
+    yandex_vpc_address.vminsert,
   ]
 }

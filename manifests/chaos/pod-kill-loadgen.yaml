@@ -1,15 +1,15 @@
 apiVersion: chaos-mesh.org/v1alpha1
 kind: PodChaos
 metadata:
-  name: es-pod-kill
-  namespace: elastic
+  name: loadgen-pod-kill
+  namespace: load
 spec:
   action: pod-kill
   mode: all
   selector:
     namespaces:
-      - elastic
+      - load
     labelSelectors:
-      elasticsearch.k8s.elastic.co/cluster-name: elastic
+      app: loadgen
     nodeSelectors:
       topology.kubernetes.io/zone: ${ZONE}

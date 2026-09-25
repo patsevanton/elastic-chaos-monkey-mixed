@@ -1,7 +1,7 @@
 apiVersion: elasticsearch.k8s.elastic.co/v1
 kind: Elasticsearch
 metadata:
-  name: chaos
+  name: elastic
   namespace: elastic
 spec:
   version: 9.5.4
@@ -9,14 +9,6 @@ spec:
     tls:
       selfSignedCertificate:
         disabled: true
-    service:
-      metadata:
-        annotations:
-          yandex.cloud/load-balancer-type: internal
-          yandex.cloud/subnet-id: NLB_SUBNET_ID
-      spec:
-        type: LoadBalancer
-        loadBalancerIP: ES_NLB_IP
   nodeSets:
     - name: zone-a
       count: 1
@@ -59,7 +51,7 @@ spec:
             storageClassName: yc-network-ssd
             resources:
               requests:
-                storage: 100Gi
+                storage: 50Gi
     - name: zone-b
       count: 1
       config:
@@ -101,7 +93,7 @@ spec:
             storageClassName: yc-network-ssd
             resources:
               requests:
-                storage: 100Gi
+                storage: 50Gi
     - name: zone-d
       count: 1
       config:
@@ -143,4 +135,4 @@ spec:
             storageClassName: yc-network-ssd
             resources:
               requests:
-                storage: 100Gi
+                storage: 50Gi

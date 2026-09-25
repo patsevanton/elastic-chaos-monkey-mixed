@@ -102,14 +102,14 @@ write_files:
         exit 1
       fi
       tailscale up --login-server="https://$${FQDN}" --authkey="$ROUTER_KEY" \
-        --advertise-routes=10.0.1.0/24,10.0.2.0/24,10.0.3.0/24,10.0.4.0/24 \
+        --advertise-routes=10.0.1.0/24,10.0.2.0/24,10.0.3.0/24 \
         --accept-dns=false
       ok=0
       for i in 1 2 3; do
         NODE_ID="$(headscale nodes list-routes -o json | python3 -c "import json,sys; data=json.load(sys.stdin); nodes=data if isinstance(data, list) else data.get('nodes', []); ids=[str(n['id']) for n in nodes if '10.0.1.0/24' in (n.get('availableRoutes') or n.get('available_routes') or [])]; print(ids[0] if ids else '')")"
         if [ -n "$${NODE_ID}" ]; then
           headscale nodes approve-routes --identifier "$NODE_ID" \
-            --routes 10.0.1.0/24,10.0.2.0/24,10.0.3.0/24,10.0.4.0/24
+            --routes 10.0.1.0/24,10.0.2.0/24,10.0.3.0/24
           ok=1
           break
         fi

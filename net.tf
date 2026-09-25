@@ -56,11 +56,3 @@ resource "yandex_vpc_subnet" "elastic_chaos_d" {
   route_table_id = yandex_vpc_route_table.rt.id
 }
 
-resource "yandex_vpc_subnet" "elastic_chaos_e" {
-  folder_id      = local.folder_id
-  name           = "elastic-chaos-e"
-  v4_cidr_blocks = ["10.0.4.0/24"]
-  zone           = "ru-central1-e"
-  network_id     = yandex_vpc_network.elastic_chaos.id
-  route_table_id = yandex_vpc_route_table.rt.id
-}

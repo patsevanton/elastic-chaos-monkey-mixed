@@ -27,8 +27,8 @@ if ping -c 1 -W 2 "$IP" >/dev/null 2>&1; then
   exit 1
 fi
 
-ES_IP="$(kubectl -n elastic get svc chaos-es-http -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
-TRAEFIK_IP="$(kubectl -n traefik get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
+TRAEFIK_IP="$(kubectl --context elastic -n traefik get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
+VMINSERT_IP="$(kubectl --context app -n vmks get svc vminsert-nlb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
 
 nlb_id_by_ip() {
   yc load-balancer network-load-balancer list --format json \
@@ -86,7 +86,7 @@ check_nlb() {
   echo "${name} ${nlb_id}: ${ZONE} in disable_zone_statuses, target ${IP} zone_shifted"
 }
 
-check_nlb es "$(nlb_id_by_ip "$ES_IP")"
 check_nlb traefik "$(nlb_id_by_ip "$TRAEFIK_IP")"
+check_nlb vminsert "$(nlb_id_by_ip "$VMINSERT_IP")"
 
 echo "zone b down: node not Ready, VM RUNNING, ${IP} unreachable, NLB disable-zones ok"

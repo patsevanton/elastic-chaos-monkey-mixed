@@ -1,20 +1,21 @@
 apiVersion: chaos-mesh.org/v1alpha1
 kind: NetworkChaos
 metadata:
-  name: es-network-loss
-  namespace: elastic
+  name: loadgen-network-delay
+  namespace: load
 spec:
-  action: loss
+  action: delay
   mode: all
   duration: 10m
   direction: both
   selector:
     namespaces:
-      - elastic
+      - load
     labelSelectors:
-      elasticsearch.k8s.elastic.co/cluster-name: elastic
+      app: loadgen
     nodeSelectors:
       topology.kubernetes.io/zone: ${ZONE}
-  loss:
-    loss: "30"
+  delay:
+    latency: 500ms
     correlation: "0"
+    jitter: 0ms

@@ -1,25 +1,5 @@
-resource "yandex_iam_service_account" "elastic_chaos_monkey" {
-  folder_id = local.folder_id
-  name      = "elastic-chaos-monkey"
-}
-
-resource "yandex_resourcemanager_folder_iam_member" "elastic_chaos_monkey_editor" {
-  folder_id = local.folder_id
-  role      = "editor"
-  member    = "serviceAccount:${yandex_iam_service_account.elastic_chaos_monkey.id}"
-}
-
-
-resource "time_sleep" "wait_sa" {
-  create_duration = "20s"
-  depends_on = [
-    yandex_iam_service_account.elastic_chaos_monkey,
-    yandex_resourcemanager_folder_iam_member.elastic_chaos_monkey_editor,
-  ]
-}
-
-resource "yandex_kubernetes_cluster" "elastic_chaos" {
-  name       = "elastic"
+resource "yandex_kubernetes_cluster" "app" {
+  name       = "app"
   folder_id  = local.folder_id
   network_id = local.network_id
 
@@ -51,19 +31,16 @@ resource "yandex_kubernetes_cluster" "elastic_chaos" {
   node_service_account_id = yandex_iam_service_account.elastic_chaos_monkey.id
   release_channel         = "STABLE"
 
-  # Зависимость от ожидания применения IAM-ролей.
-  # При destroy кластер должен удалиться ДО time_sleep.wait_lb_release,
-  # чтобы CCM успел снять internal NLB Traefik (и ES).
   depends_on = [
     time_sleep.wait_sa,
     time_sleep.wait_lb_release,
   ]
 }
 
-resource "yandex_kubernetes_node_group" "k8s_node_group_a" {
-  name        = "elastic-a"
+resource "yandex_kubernetes_node_group" "app_a" {
+  name        = "app-a"
   description = "Worker in ru-central1-a"
-  cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
+  cluster_id  = yandex_kubernetes_cluster.app.id
   version     = "1.33"
 
   scale_policy {
@@ -85,8 +62,8 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_a" {
     }
 
     resources {
-      cores  = 8
-      memory = 16
+      cores  = 2
+      memory = 4
     }
 
     boot_disk {
@@ -104,10 +81,10 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_a" {
   }
 }
 
-resource "yandex_kubernetes_node_group" "k8s_node_group_b" {
-  name        = "elastic-b"
-  description = "Worker in ru-central1-b (AZ-outage target)"
-  cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
+resource "yandex_kubernetes_node_group" "app_b" {
+  name        = "app-b"
+  description = "Worker in ru-central1-b"
+  cluster_id  = yandex_kubernetes_cluster.app.id
   version     = "1.33"
 
   scale_policy {
@@ -129,8 +106,8 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_b" {
     }
 
     resources {
-      cores  = 8
-      memory = 16
+      cores  = 2
+      memory = 4
     }
 
     boot_disk {
@@ -148,10 +125,10 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_b" {
   }
 }
 
-resource "yandex_kubernetes_node_group" "k8s_node_group_d" {
-  name        = "elastic-d"
+resource "yandex_kubernetes_node_group" "app_d" {
+  name        = "app-d"
   description = "Worker in ru-central1-d"
-  cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
+  cluster_id  = yandex_kubernetes_cluster.app.id
   version     = "1.33"
 
   scale_policy {
@@ -173,8 +150,8 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_d" {
     }
 
     resources {
-      cores  = 8
-      memory = 16
+      cores  = 2
+      memory = 4
     }
 
     boot_disk {
@@ -192,22 +169,6 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_d" {
   }
 }
 
-output "elastic_credentials_command" {
-  value = "yc managed-kubernetes cluster get-credentials --id ${yandex_kubernetes_cluster.elastic_chaos.id} --internal --force --context-name elastic"
+output "app_credentials_command" {
+  value = "yc managed-kubernetes cluster get-credentials --id ${yandex_kubernetes_cluster.app.id} --internal --force --context-name app"
 }
-
-output "k8s_cluster_id" {
-  description = "ID кластера"
-  value       = yandex_kubernetes_cluster.elastic_chaos.id
-}
-
-output "nlb_subnet_id" {
-  description = "Подсеть a для internal NLB"
-  value       = local.subnet_a_id
-}
-
-output "zone_isolation_sg_id" {
-  description = "ID пустого Security Group для изоляции зоны"
-  value       = yandex_vpc_security_group.zone_isolation.id
-}
-

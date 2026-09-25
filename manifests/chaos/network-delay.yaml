@@ -6,15 +6,16 @@ metadata:
 spec:
   action: delay
   mode: all
-  duration: 15m
+  duration: 10m
+  direction: both
   selector:
     namespaces:
       - elastic
     labelSelectors:
-      elasticsearch.k8s.elastic.co/cluster-name: chaos
+      elasticsearch.k8s.elastic.co/cluster-name: elastic
     nodeSelectors:
-      topology.kubernetes.io/zone: ru-central1-b
+      topology.kubernetes.io/zone: ${ZONE}
   delay:
-    latency: "500ms"
+    latency: 500ms
     correlation: "0"
-    jitter: "0ms"
+    jitter: 0ms

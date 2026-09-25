@@ -1,20 +1,20 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: kibana
+  name: elasticsearch
   namespace: elastic
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
   ingressClassName: traefik
   rules:
-    - host: kibana.INGRESS_IP.sslip.io
+    - host: elastic.INGRESS_IP.sslip.io
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: elastic-kb-http
+                name: elastic-es-http
                 port:
-                  number: 5601
+                  number: 9200

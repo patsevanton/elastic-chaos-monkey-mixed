@@ -48,6 +48,10 @@ terraform.rc
 # Values-файлы, сгенерированные Terraform из *.yaml.tftpl
 vmks-values.yaml
 traefik-values.yaml
+traefik-elastic-values.yaml
+traefik-app-values.yaml
 chaos-mesh-values.yaml
+chaos-mesh-elastic-values.yaml
+chaos-mesh-app-values.yaml
 
 rally-tracks-nomvt-8500-v4.tar.gz

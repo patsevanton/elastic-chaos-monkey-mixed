@@ -1,5 +1,5 @@
 ---
-description: Проверяет Chaos Mesh и что зона b изолирована: нода не Ready, VM RUNNING, InternalIP тихий, NLB disable-zones. Не запускает хаос и не восстанавливает зону.
+description: Проверяет Chaos Mesh и что заданная зона изолирована: нода не Ready, VM RUNNING, InternalIP тихий, NLB disable-zones. Не запускает хаос и не восстанавливает зону.
 mode: subagent
 model: openai/gpt-6-luna-pro
 permission:
@@ -24,6 +24,6 @@ permission:
 
 Chaos Mesh: `./scripts/check-chaos.sh podchaos es-pod-kill` или `./scripts/check-chaos.sh networkchaos es-network-loss` / `es-network-delay`. Успех только если phase `Injected`.
 
-Отвал зоны b: `./scripts/check-zone-b-down.sh`. Успех только если нода не Ready, VM `RUNNING`, InternalIP не отвечает на ping, на обоих NLB (`chaos-es-http`, `traefik`) зона `b` в `disable_zone_statuses` и target ноды помечен `zone_shifted`. VM `RUNNING` отличает нашу изоляцию от preemptible-отвала Яндекса.
+Отвал зоны: нода этой зоны не Ready, VM `RUNNING`, InternalIP не отвечает на ping. `disable-zones` только на NLB Traefik кластера `elastic` и NLB `vminsert`, не на `chaos-es-http` и не на Traefik кластера `app`. Target ноды помечен `zone_shifted`. VM `RUNNING` отличает нашу изоляцию от preemptible-отвала Яндекса.
 
 Если проверка не сошлась — код выхода ненулевой и факты, без починки.
