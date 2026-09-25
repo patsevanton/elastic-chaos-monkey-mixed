@@ -88,12 +88,11 @@ helm --kube-context app upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
 kubectl --context app apply -f manifests/exporter/chaos-mesh-scrape.yaml
 ```
 
-loadgen в `app`, образ `loadgen:0.1.0` (не `latest`):
+loadgen в `app`, образ `ghcr.io/patsevanton/elastic-chaos-monkey-mixed` (собирается workflow `.github/workflows/docker.yml` при push в `main`, публикуется в GHCR; тег фиксирован в `loadgen/chart/values.yaml`):
 
 ```bash
-docker build -t loadgen:0.1.0 loadgen
 helm --kube-context app upgrade --install loadgen loadgen/chart \
-  --namespace load --create-namespace --set image=loadgen:0.1.0
+  --namespace load --create-namespace
 ```
 
 ## Прогон

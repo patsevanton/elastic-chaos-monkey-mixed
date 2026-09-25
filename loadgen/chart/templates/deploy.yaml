@@ -27,7 +27,8 @@ spec:
               app: loadgen
       containers:
         - name: loadgen
-          image: {{ .Values.image }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: ["-es", {{ .Values.esURL | quote }}]
           ports:
             - name: metrics
