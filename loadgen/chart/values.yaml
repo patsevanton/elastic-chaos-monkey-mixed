@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/patsevanton/elastic-chaos-monkey-mixed
-  tag: "1.0.1"
+  tag: "1.0.3"
   pullPolicy: IfNotPresent
 esURL: http://elastic.10.0.1.33.sslip.io
 replicaCount: 3
