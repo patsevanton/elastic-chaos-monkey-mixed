@@ -44,7 +44,7 @@ resource "yandex_kubernetes_cluster" "elastic_chaos" {
       }
     }
 
-    public_ip = false
+    public_ip = true
   }
 
   service_account_id      = yandex_iam_service_account.elastic_chaos_monkey.id
@@ -193,12 +193,12 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_d" {
 }
 
 output "elastic_credentials_command" {
-  value = "yc managed-kubernetes cluster get-credentials --id ${yandex_kubernetes_cluster.elastic_chaos.id} --internal --force --context-name elastic"
+  value = "yc managed-kubernetes cluster get-credentials --id ${yandex_kubernetes_cluster.elastic_chaos.id} --external --force --context-name elastic"
 }
 
-output "k8s_cluster_id" {
-  description = "ID кластера"
-  value       = yandex_kubernetes_cluster.elastic_chaos.id
+output "elastic_cluster_external_ip" {
+  description = "Внешний IP API master кластера elastic"
+  value       = yandex_kubernetes_cluster.elastic_chaos.master[0].external_v4_address
 }
 
 output "nlb_subnet_id" {
