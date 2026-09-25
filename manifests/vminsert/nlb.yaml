@@ -5,7 +5,7 @@ metadata:
   namespace: vmks
   annotations:
     yandex.cloud/load-balancer-type: internal
-    yandex.cloud/subnet-id: NLB_SUBNET_ID
+    yandex.cloud/subnet-id: ${NLB_SUBNET_ID}
 spec:
   type: LoadBalancer
   loadBalancerIP: 10.0.1.35
