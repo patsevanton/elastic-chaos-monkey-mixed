@@ -15,6 +15,11 @@ spec:
       app: loadgen
     nodeSelectors:
       topology.kubernetes.io/zone: ${ZONE}
+  target:
+    mode: all
+    selector:
+      namespaces:
+        - load
   loss:
     loss: "30"
     correlation: "0"
