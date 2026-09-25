@@ -48,11 +48,12 @@
 
 Два Yandex Managed K8s **1.33**. Service account: `elastic-chaos-monkey`. Terraform в k8s API не ходит.
 
-Оба кластера: три node group, по одной preemptible-ноде, загрузочный диск **HDD**, **без публичного IP**, `master.public_ip = false`. Зоны: `ru-central1-a`, `ru-central1-b`, `ru-central1-d`.
+`elastic`: шесть node group, по одной preemptible-ноде, загрузочный диск **HDD**, **без публичного IP**. `app`: три node group, те же ограничения. `master.public_ip = false`. Зоны: `ru-central1-a`, `ru-central1-b`, `ru-central1-d`.
 
 | Кластер | Нода |
 |---|---|
-| es | 8 vCPU / 16 ГБ, HDD |
+| es master | 2 vCPU / 4 ГБ, HDD |
+| es data | 8 vCPU / 16 ГБ, HDD |
 | app | 2 vCPU / 4 ГБ, HDD |
 
 Исключение из правила HDD: PVC Elasticsearch — `yc-network-ssd`. Ноды обоих кластеров и Headscale VM — HDD.
@@ -64,9 +65,7 @@
 ### Elasticsearch (ECK)
 
 - Elasticsearch **9.5.4**, ECK **3.5.0**.
-- Три mixed-ноды (master + data + ingest), по одной в зоне `a` / `b` / `d`.
-- PVC **100 ГиБ** `yc-network-ssd` на ноду.
-- CPU: requests **4**, limits **6**. RAM requests **6 ГиБ**, heap **3 ГиБ**.
+- Роли и размеры нод — [2026-09-25-elastic-master-data-split-design.md](2026-09-25-elastic-master-data-split-design.md): 3 master без PVC и 3 data, PVC **50 ГиБ**.
 - Индекс нагрузки: **1 primary + 2 replica**.
 - `cluster.routing.allocation.awareness.attributes: zone`.
 - `cluster.routing.allocation.awareness.force.zone.values` — три зоны.
@@ -119,7 +118,7 @@ ECK operator и Chaos Mesh controller: по 3 реплики в своём кл�
 1. **Pod-kill** — 10 минут, kill повторяется всё окно. Цель: поды приложения и поды Elasticsearch в этой зоне.
 2. **Network loss 30%** — 10 минут, поды приложения и Elasticsearch в этой зоне.
 3. **Network delay 500 мс** — 10 минут, те же поды.
-4. **Изоляция зоны** — 10 минут. Пустой SG `zone-isolation` на node group этой зоны в **обоих** кластерах. VM остаётся `RUNNING`. На NLB Traefik es-кластера (путь app → ES) — `disable-zones` этой зоны. На NLB `vminsert` — тоже, иначе remote write из изолированной зоны es-кластера не отражает отвал. На app-кластере `disable-zones` нет: изоляции node group достаточно. Затем restore и следующий покой.
+4. **Изоляция зоны** — 10 минут. Пустой SG `zone-isolation` на node group `elastic-master-*`, `elastic-data-*` и `app-*` этой зоны. VM остаётся `RUNNING`. На NLB Traefik es-кластера (путь app → ES) — `disable-zones` этой зоны. На NLB `vminsert` — тоже, иначе remote write из изолированной зоны es-кластера не отражает отвал. На app-кластере `disable-zones` нет: изоляции node group достаточно. Затем restore и следующий покой.
 
 `disable-zones` не чаще раза в 2 минуты на один NLB.
 

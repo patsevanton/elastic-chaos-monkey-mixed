@@ -7,10 +7,10 @@ if [ ! -f "$STATE_FILE" ]; then
   echo "нет $STATE_FILE" >&2
   exit 1
 fi
-ZONE="" ELASTIC_NG="" APP_NG="" ELASTIC_SG="" APP_SG="" NLB_TRAEFIK_ID="" NLB_VMINSERT_ID=""
+ZONE="" ELASTIC_MASTER_NG="" ELASTIC_DATA_NG="" APP_NG="" ELASTIC_MASTER_SG="" ELASTIC_DATA_SG="" APP_SG="" NLB_TRAEFIK_ID="" NLB_VMINSERT_ID=""
 # shellcheck disable=SC1090
 source "$STATE_FILE"
-if [ -z "$ZONE" ] || [ -z "$ELASTIC_NG" ] || [ -z "$APP_NG" ] || [ -z "$NLB_TRAEFIK_ID" ] || [ -z "$NLB_VMINSERT_ID" ]; then
+if [ -z "$ZONE" ] || [ -z "$ELASTIC_MASTER_NG" ] || [ -z "$ELASTIC_DATA_NG" ] || [ -z "$APP_NG" ] || [ -z "$NLB_TRAEFIK_ID" ] || [ -z "$NLB_VMINSERT_ID" ]; then
   echo "state неполный" >&2
   exit 1
 fi
@@ -26,7 +26,8 @@ restore_ng() {
   fi
 }
 
-restore_ng "$ELASTIC_NG" "$ELASTIC_SG"
+restore_ng "$ELASTIC_MASTER_NG" "$ELASTIC_MASTER_SG"
+restore_ng "$ELASTIC_DATA_NG" "$ELASTIC_DATA_SG"
 restore_ng "$APP_NG" "$APP_SG"
 yc load-balancer network-load-balancer enable-zones --id "$NLB_TRAEFIK_ID" --zones "$ZONE"
 yc load-balancer network-load-balancer enable-zones --id "$NLB_VMINSERT_ID" --zones "$ZONE"

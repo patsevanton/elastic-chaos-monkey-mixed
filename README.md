@@ -12,14 +12,14 @@
 
 | Компонент | Куда |
 |---|---|
-| Elasticsearch 9.5.4 mixed ×3 | кластер `elastic`, зоны `a`/`b`/`d`, PVC **50 ГиБ** `yc-network-ssd`, heap 3 ГиБ |
+| Elasticsearch 9.5.4 master ×3 + data ×3 | кластер `elastic`, зоны `a`/`b`/`d`; data PVC **50 ГиБ** `yc-network-ssd`, heap 3 ГиБ; master без PVC, heap 1 ГиБ |
 | Kibana 9.5.4 ×3 | публичный NLB Traefik, `kibana.<IP>.sslip.io` |
 | loadgen ×3 | кластер `app`, spread по зонам |
 | vmks 0.92.1 | `app` и `elastic`, namespace `vmks` |
 | Traefik 41.6.0 ×3 | оба кластера: internal NLB и публичный NLB |
 | Chaos Mesh 2.8.4 | оба кластера |
 
-Ноды без публичного IP, HDD, preemptible. `elastic`: 8 vCPU / 16 ГБ. `app`: 2 vCPU / 4 ГБ. SA `elastic-chaos-monkey`. Kubernetes **1.33**.
+Ноды без публичного IP, HDD, preemptible. `elastic`: master 2 vCPU / 4 ГБ, data 8 vCPU / 16 ГБ. `app`: 4 vCPU / 8 ГБ. SA `elastic-chaos-monkey`. Kubernetes **1.33**.
 
 Инфра: [INFRASTRUCTURE.md](INFRASTRUCTURE.md).
 
@@ -102,10 +102,11 @@ helm --kube-context app upgrade --install loadgen loadgen/chart \
 
 ```bash
 kubectl config use-context elastic
-./scripts/verify-ng-sg-swap.sh "$(terraform output -raw zone_isolation_sg_id)" ru-central1-a elastic-a
+./scripts/verify-ng-sg-swap.sh "$(terraform output -raw zone_isolation_sg_id)" ru-central1-a elastic-master-a
+./scripts/verify-ng-sg-swap.sh "$(terraform output -raw zone_isolation_sg_id)" ru-central1-a elastic-data-a
 ```
 
-То же для `elastic-b`, `elastic-d` и, в контексте `app`, для `app-a`, `app-b`, `app-d`. `VERDICT: RECREATE` — isolate/restore не использовать.
+То же для `elastic-master-b`, `elastic-master-d`, `elastic-data-b`, `elastic-data-d` и, в контексте `app`, для `app-a`, `app-b`, `app-d`. `VERDICT: RECREATE` — isolate/restore не использовать.
 
 ```bash
 ./scripts/chaos-run.sh

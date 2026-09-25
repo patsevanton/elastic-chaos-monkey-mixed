@@ -1,6 +1,6 @@
 # Развёртывание инфраструктуры: Terraform
 
-Два Yandex Managed Kubernetes 1.33 в одной VPC: `elastic` (ноды 8 vCPU / 16 ГБ) и `app` (ноды 2 vCPU / 4 ГБ). По одной preemptible-ноде HDD в `ru-central1-a`/`b`/`d`, без публичного IP. Egress приватных подсетей — один NAT Gateway. Публичные IP только у внешних NLB Traefik. Входа ingress-nginx нет. Между кластерами — internal NLB Traefik.
+Два Yandex Managed Kubernetes 1.33 в одной VPC. `elastic`: шесть node group, master 2 vCPU / 4 ГБ и data 8 vCPU / 16 ГБ, по одной в `ru-central1-a`/`b`/`d`. `app`: три node group 4 vCPU / 8 ГБ, по одной в тех же зонах. Ноды preemptible, HDD, без публичного IP. Egress приватных подсетей — один NAT Gateway. Публичные IP только у внешних NLB Traefik. Входа ingress-nginx нет. Между кластерами — internal NLB Traefik.
 
 Service account: `elastic-chaos-monkey`.
 
@@ -24,9 +24,9 @@ Chart **41.6.0**, 3 реплики. На каждом кластере два Se
 
 ## Изоляция зоны
 
-Пустой SG `zone-isolation`. `lifecycle.ignore_changes` на `security_group_ids` у всех шести node group. Переключение только `./scripts/isolate-zone.sh` / `./scripts/restore-zone.sh`. State: `.state/zone-isolate.env`.
+Пустой SG `zone-isolation`. `lifecycle.ignore_changes` на `security_group_ids` у всех девяти node group. Переключение только `./scripts/isolate-zone.sh` / `./scripts/restore-zone.sh`. State: `.state/zone-isolate.env`.
 
-Isolate ставит пустой SG на node group этой зоны в обоих кластерах. `disable-zones` — только NLB Traefik кластера `elastic` и NLB `vminsert`. На кластере `app` `disable-zones` нет. VM остаётся `RUNNING`.
+Isolate ставит пустой SG на `elastic-master-*`, `elastic-data-*` и `app-*` этой зоны. `disable-zones` — только NLB Traefik кластера `elastic` и NLB `vminsert`. На кластере `app` `disable-zones` нет. VM остаётся `RUNNING`.
 
 Restore возвращает сохранённые SG и делает `enable-zones` на оба NLB.
 

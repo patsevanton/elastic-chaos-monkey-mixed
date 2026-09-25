@@ -60,9 +60,141 @@ resource "yandex_kubernetes_cluster" "elastic_chaos" {
   ]
 }
 
-resource "yandex_kubernetes_node_group" "k8s_node_group_a" {
-  name        = "elastic-a"
-  description = "Worker in ru-central1-a"
+resource "yandex_kubernetes_node_group" "elastic_master_a" {
+  name        = "elastic-master-a"
+  description = "Elasticsearch master in ru-central1-a"
+  cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
+  version     = "1.33"
+
+  scale_policy {
+    fixed_scale {
+      size = 1
+    }
+  }
+
+  allocation_policy {
+    location { zone = local.subnet_a_zone }
+  }
+
+  instance_template {
+    platform_id = "standard-v3"
+
+    network_interface {
+      nat        = false
+      subnet_ids = [local.subnet_a_id]
+    }
+
+    resources {
+      cores  = 2
+      memory = 4
+    }
+
+    boot_disk {
+      type = "network-hdd"
+      size = 64
+    }
+
+    scheduling_policy {
+      preemptible = true
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [instance_template[0].network_interface[0].security_group_ids]
+  }
+}
+
+resource "yandex_kubernetes_node_group" "elastic_master_b" {
+  name        = "elastic-master-b"
+  description = "Elasticsearch master in ru-central1-b"
+  cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
+  version     = "1.33"
+
+  scale_policy {
+    fixed_scale {
+      size = 1
+    }
+  }
+
+  allocation_policy {
+    location { zone = local.subnet_b_zone }
+  }
+
+  instance_template {
+    platform_id = "standard-v3"
+
+    network_interface {
+      nat        = false
+      subnet_ids = [local.subnet_b_id]
+    }
+
+    resources {
+      cores  = 2
+      memory = 4
+    }
+
+    boot_disk {
+      type = "network-hdd"
+      size = 64
+    }
+
+    scheduling_policy {
+      preemptible = true
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [instance_template[0].network_interface[0].security_group_ids]
+  }
+}
+
+resource "yandex_kubernetes_node_group" "elastic_master_d" {
+  name        = "elastic-master-d"
+  description = "Elasticsearch master in ru-central1-d"
+  cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
+  version     = "1.33"
+
+  scale_policy {
+    fixed_scale {
+      size = 1
+    }
+  }
+
+  allocation_policy {
+    location { zone = local.subnet_d_zone }
+  }
+
+  instance_template {
+    platform_id = "standard-v3"
+
+    network_interface {
+      nat        = false
+      subnet_ids = [local.subnet_d_id]
+    }
+
+    resources {
+      cores  = 2
+      memory = 4
+    }
+
+    boot_disk {
+      type = "network-hdd"
+      size = 64
+    }
+
+    scheduling_policy {
+      preemptible = true
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [instance_template[0].network_interface[0].security_group_ids]
+  }
+}
+
+resource "yandex_kubernetes_node_group" "elastic_data_a" {
+  name        = "elastic-data-a"
+  description = "Elasticsearch data in ru-central1-a"
   cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
   version     = "1.33"
 
@@ -104,9 +236,9 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_a" {
   }
 }
 
-resource "yandex_kubernetes_node_group" "k8s_node_group_b" {
-  name        = "elastic-b"
-  description = "Worker in ru-central1-b (AZ-outage target)"
+resource "yandex_kubernetes_node_group" "elastic_data_b" {
+  name        = "elastic-data-b"
+  description = "Elasticsearch data in ru-central1-b"
   cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
   version     = "1.33"
 
@@ -148,9 +280,9 @@ resource "yandex_kubernetes_node_group" "k8s_node_group_b" {
   }
 }
 
-resource "yandex_kubernetes_node_group" "k8s_node_group_d" {
-  name        = "elastic-d"
-  description = "Worker in ru-central1-d"
+resource "yandex_kubernetes_node_group" "elastic_data_d" {
+  name        = "elastic-data-d"
+  description = "Elasticsearch data in ru-central1-d"
   cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
   version     = "1.33"
 

@@ -20,13 +20,17 @@ ng_json() { yc managed-kubernetes node-group get "$1" --format json; }
 sg_of() { jq -r '.node_template.network_interface_specs[0].security_group_ids // [] | join(",")' <<<"$1"; }
 subnets_of() { jq -r '.node_template.network_interface_specs[0].subnet_ids // [] | join(",")' <<<"$1"; }
 
-ELASTIC_NG="elastic-${SUFFIX}"
+MASTER_NG="elastic-master-${SUFFIX}"
+DATA_NG="elastic-data-${SUFFIX}"
 APP_NG="app-${SUFFIX}"
-ELASTIC_JSON="$(ng_json "$ELASTIC_NG")"
+MASTER_JSON="$(ng_json "$MASTER_NG")"
+DATA_JSON="$(ng_json "$DATA_NG")"
 APP_JSON="$(ng_json "$APP_NG")"
-ELASTIC_SG="$(sg_of "$ELASTIC_JSON")"
+MASTER_SG="$(sg_of "$MASTER_JSON")"
+DATA_SG="$(sg_of "$DATA_JSON")"
 APP_SG="$(sg_of "$APP_JSON")"
-ELASTIC_SUBNETS="$(subnets_of "$ELASTIC_JSON")"
+MASTER_SUBNETS="$(subnets_of "$MASTER_JSON")"
+DATA_SUBNETS="$(subnets_of "$DATA_JSON")"
 APP_SUBNETS="$(subnets_of "$APP_JSON")"
 
 nlb_id_by_ip() {
@@ -45,16 +49,19 @@ SG_ID="$(terraform output -raw zone_isolation_sg_id)"
 
 cat > "$STATE_FILE" <<EOF
 ZONE=$ZONE
-ELASTIC_NG=$ELASTIC_NG
+ELASTIC_MASTER_NG=$MASTER_NG
+ELASTIC_DATA_NG=$DATA_NG
 APP_NG=$APP_NG
-ELASTIC_SG=$ELASTIC_SG
+ELASTIC_MASTER_SG=$MASTER_SG
+ELASTIC_DATA_SG=$DATA_SG
 APP_SG=$APP_SG
 NLB_TRAEFIK_ID=$NLB_TRAEFIK_ID
 NLB_VMINSERT_ID=$NLB_VMINSERT_ID
 EOF
 
-echo "isolate $ZONE sg=$SG_ID ng=$ELASTIC_NG,$APP_NG"
-yc managed-kubernetes node-group update "$ELASTIC_NG" --network-interface "subnets=${ELASTIC_SUBNETS},security-group-ids=[${SG_ID}]"
+echo "isolate $ZONE sg=$SG_ID ng=$MASTER_NG,$DATA_NG,$APP_NG"
+yc managed-kubernetes node-group update "$MASTER_NG" --network-interface "subnets=${MASTER_SUBNETS},security-group-ids=[${SG_ID}]"
+yc managed-kubernetes node-group update "$DATA_NG" --network-interface "subnets=${DATA_SUBNETS},security-group-ids=[${SG_ID}]"
 yc managed-kubernetes node-group update "$APP_NG" --network-interface "subnets=${APP_SUBNETS},security-group-ids=[${SG_ID}]"
 yc load-balancer network-load-balancer disable-zones --id "$NLB_TRAEFIK_ID" --zones "$ZONE"
 sleep 120
