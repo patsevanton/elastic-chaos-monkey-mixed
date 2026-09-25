@@ -1,26 +1,26 @@
 # Развёртывание инфраструктуры: Terraform
 
-Два Yandex Managed Kubernetes 1.33 в одной VPC: `elastic` (ноды 8 vCPU / 16 ГБ) и `app` (ноды 2 vCPU / 4 ГБ). По одной preemptible-ноде HDD в `ru-central1-a`/`b`/`d`, без публичного IP. Egress приватных подсетей — один NAT Gateway. Публичный IP только у Headscale VM. Входа ingress-nginx нет, вход — Traefik.
+Два Yandex Managed Kubernetes 1.33 в одной VPC: `elastic` (ноды 8 vCPU / 16 ГБ) и `app` (ноды 2 vCPU / 4 ГБ). По одной preemptible-ноде HDD в `ru-central1-a`/`b`/`d`, без публичного IP. Egress приватных подсетей — один NAT Gateway. Публичные IP только у внешних NLB Traefik. Входа ingress-nginx нет. Между кластерами — internal NLB Traefik.
 
 Service account: `elastic-chaos-monkey`.
 
 ## Сеть
 
-Подсети `10.0.1.0/24` (`a`), `10.0.2.0/24` (`b`), `10.0.3.0/24` (`d`) общие. Подсеть Headscale `10.0.0.0/24` без route table. Подсети `10.0.4.0/24` нет.
+Подсети `10.0.1.0/24` (`a`), `10.0.2.0/24` (`b`), `10.0.3.0/24` (`d`) общие. Подсети `10.0.0.0/24` и `10.0.4.0/24` нет.
 
-Reserved internal IP в подсети `a`: Traefik `elastic` `10.0.1.33`, Traefik `app` `10.0.1.34`, `vminsert` `10.0.1.35`.
+Reserved internal IP в подсети `a`: Traefik `elastic` `10.0.1.33`, Traefik `app` `10.0.1.34`, `vminsert` `10.0.1.35`. Публичные IP: внешний NLB Traefik `app` и `elastic`.
 
-## Headscale
+## Публичный доступ
 
-`headscale-vm.tf`: Ubuntu, 2 vCPU / 4 ГБ, HDD 20 ГиБ, preemptible, зона `a`. Единственный публичный IP. Headscale **0.29.3**, Tailscale **1.102.4**, subnet router на `10.0.1.0/24`–`10.0.3.0/24`.
+Браузер → внешний NLB Traefik → entrypoint `public` → Ingress. `app`: Grafana и Chaos Dashboard, `grafana.<IP>.sslip.io` и `chaos-dashboard.<IP>.sslip.io`. `elastic`: Kibana и Chaos Dashboard, `kibana.<IP>.sslip.io` и `chaos-dashboard.<IP>.sslip.io`. Elasticsearch снаружи не публикуется: его Ingress на entrypoint `web` внутреннего NLB.
 
 ## Traefik
 
-Chart **41.6.0**, 3 реплики, internal NLB. Кластер `elastic`: `traefik-elastic-values.yaml`, хосты Kibana и Elasticsearch. Кластер `app`: `traefik-app-values.yaml`, Grafana. Ingress-nginx не ставить.
+Chart **41.6.0**, 3 реплики. На каждом кластере два Service: internal NLB (`web`) и внешний NLB (`public`). Кластер `elastic`: `traefik-elastic-values.yaml`. Кластер `app`: `traefik-app-values.yaml`. Ingress-nginx не ставить.
 
 ## VictoriaMetrics
 
-Только кластер `app`, namespace `vmks`, chart **0.92.1**. Grafana 1 реплика на `10.0.1.34`. VMCluster RF=3, vmstorage HDD 30 ГиБ. Control-plane scrape и recording-правила выключены. `vminsert` публикуется Service `vminsert-nlb` на `10.0.1.35:8480`. vmagent кластера `elastic` пишет туда remote write, не в vmagent `app`.
+Оба кластера, namespace `vmks`, chart **0.92.1**. `app`: Grafana 1 реплика, снаружи через публичный NLB Traefik, VMCluster RF=3, vmstorage HDD 30 ГиБ. `elastic`: тот же chart без Grafana — CRD оператора для `VMAgent`. Control-plane scrape и recording-правила выключены в обоих. `vminsert` публикуется Service `vminsert-nlb` на `10.0.1.35:8480`. vmagent кластера `elastic` пишет туда remote write, не в vmagent `app`.
 
 ## Изоляция зоны
 
@@ -36,8 +36,7 @@ Restore возвращает сохранённые SG и делает `enable-z
 
 ## Требования
 
-- yc CLI, Terraform >= 1.3, kubectl, Helm >= 3, Tailscale, `jq`, `curl`, `envsubst`
-- `~/.ssh/id_ed25519.pub` для Headscale VM
+- yc CLI, Terraform >= 1.3, kubectl, Helm >= 3, `jq`, `curl`, `envsubst`
 
 ## Запуск
 
@@ -45,9 +44,6 @@ Restore возвращает сохранённые SG и делает `enable-z
 export TF_VAR_folder_id=<folder id>
 terraform init
 terraform apply
-sudo tailscale up --login-server=$(terraform output -raw headscale_url) \
-  --auth-key=$(terraform output -raw headscale_laptop_preauth) \
-  --accept-routes --force-reauth
 eval "$(terraform output -raw elastic_credentials_command)"
 eval "$(terraform output -raw app_credentials_command)"
 ```

@@ -4,7 +4,7 @@ metadata:
   name: kibana
   namespace: elastic
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.entrypoints: public
 spec:
   ingressClassName: traefik
   rules:

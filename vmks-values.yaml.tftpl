@@ -14,7 +14,7 @@ grafana:
     enabled: true
     ingressClassName: traefik
     annotations:
-      traefik.ingress.kubernetes.io/router.entrypoints: web
+      traefik.ingress.kubernetes.io/router.entrypoints: public
     hosts:
       - grafana.${ingress_ip}.sslip.io
 

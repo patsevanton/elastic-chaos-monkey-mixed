@@ -3,14 +3,6 @@ resource "yandex_vpc_network" "elastic_chaos" {
   folder_id = local.folder_id
 }
 
-resource "yandex_vpc_subnet" "elastic_chaos_public" {
-  folder_id      = local.folder_id
-  name           = "elastic-chaos-public"
-  v4_cidr_blocks = ["10.0.0.0/24"]
-  zone           = "ru-central1-a"
-  network_id     = yandex_vpc_network.elastic_chaos.id
-}
-
 resource "yandex_vpc_gateway" "nat" {
   folder_id = local.folder_id
   name      = "elastic-chaos-nat"

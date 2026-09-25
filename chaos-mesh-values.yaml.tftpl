@@ -10,6 +10,6 @@ dashboard:
     apiVersionOverrides: networking.k8s.io/v1
     ingressClassName: traefik
     annotations:
-      traefik.ingress.kubernetes.io/router.entrypoints: web
+      traefik.ingress.kubernetes.io/router.entrypoints: public
     hosts:
       - name: chaos-dashboard.${ingress_ip}.sslip.io

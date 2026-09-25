@@ -1,7 +1,14 @@
-resource "yandex_vpc_address" "ingress" {
-  name = "elastic-chaos-ingress-pip"
+resource "yandex_vpc_address" "traefik_app_public" {
+  name = "app-traefik-pip"
   external_ipv4_address {
-    zone_id = yandex_vpc_subnet.elastic_chaos_public.zone
+    zone_id = "ru-central1-a"
+  }
+}
+
+resource "yandex_vpc_address" "traefik_elastic_public" {
+  name = "elastic-traefik-pip"
+  external_ipv4_address {
+    zone_id = "ru-central1-a"
   }
 }
 
@@ -37,7 +44,8 @@ resource "time_sleep" "wait_lb_release" {
   destroy_duration = "60s"
 
   depends_on = [
-    yandex_vpc_address.ingress,
+    yandex_vpc_address.traefik_app_public,
+    yandex_vpc_address.traefik_elastic_public,
     yandex_vpc_address.traefik,
     yandex_vpc_address.traefik_app,
     yandex_vpc_address.vminsert,

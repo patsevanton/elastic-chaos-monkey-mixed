@@ -1,3 +1,3 @@
-image: loadgen:latest
+image: loadgen:0.1.0
 esURL: http://elastic.10.0.1.33.sslip.io
 replicaCount: 3

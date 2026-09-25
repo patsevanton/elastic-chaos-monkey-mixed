@@ -1,26 +1,35 @@
 locals {
   vmks_values = templatefile("${path.module}/vmks-values.yaml.tftpl", {
-    ingress_ip = local.traefik_app_ip
+    ingress_ip = local.traefik_app_public_ip
   })
+  vmks_elastic_values = templatefile("${path.module}/vmks-elastic-values.yaml.tftpl", {})
   traefik_elastic_values = templatefile("${path.module}/traefik-values.yaml.tftpl", {
     nlb_subnet_id = local.subnet_a_id
     traefik_ip    = local.traefik_elastic_ip
+    public_ip     = local.traefik_elastic_public_ip
   })
   traefik_app_values = templatefile("${path.module}/traefik-values.yaml.tftpl", {
     nlb_subnet_id = local.subnet_a_id
     traefik_ip    = local.traefik_app_ip
+    public_ip     = local.traefik_app_public_ip
   })
   chaos_mesh_elastic_values = templatefile("${path.module}/chaos-mesh-values.yaml.tftpl", {
-    ingress_ip = local.traefik_elastic_ip
+    ingress_ip = local.traefik_elastic_public_ip
   })
   chaos_mesh_app_values = templatefile("${path.module}/chaos-mesh-values.yaml.tftpl", {
-    ingress_ip = local.traefik_app_ip
+    ingress_ip = local.traefik_app_public_ip
   })
 }
 
 resource "local_file" "write_vmks_values" {
   content         = local.vmks_values
   filename        = "${path.module}/vmks-values.yaml"
+  file_permission = "0644"
+}
+
+resource "local_file" "write_vmks_elastic_values" {
+  content         = local.vmks_elastic_values
+  filename        = "${path.module}/vmks-elastic-values.yaml"
   file_permission = "0644"
 }
 
@@ -49,13 +58,13 @@ resource "local_file" "write_chaos_mesh_app_values" {
 }
 
 output "grafana_url" {
-  description = "URL Grafana через Traefik кластера app"
-  value       = "http://grafana.${local.traefik_app_ip}.sslip.io"
+  description = "Публичный URL Grafana через Traefik"
+  value       = "http://grafana.${local.traefik_app_public_ip}.sslip.io"
 }
 
 output "kibana_url" {
-  description = "URL Kibana через Traefik кластера elastic"
-  value       = "http://kibana.${local.traefik_elastic_ip}.sslip.io"
+  description = "Публичный URL Kibana через Traefik"
+  value       = "http://kibana.${local.traefik_elastic_public_ip}.sslip.io"
 }
 
 output "elastic_url" {
@@ -64,13 +73,26 @@ output "elastic_url" {
 }
 
 output "chaos_dashboard_url" {
-  description = "URL Chaos Mesh Dashboard кластера elastic"
-  value       = "http://chaos-dashboard.${local.traefik_elastic_ip}.sslip.io"
+  description = "Публичный URL Chaos Mesh Dashboard кластера elastic"
+  value       = "http://chaos-dashboard.${local.traefik_elastic_public_ip}.sslip.io"
+}
+
+output "chaos_dashboard_app_url" {
+  description = "Публичный URL Chaos Mesh Dashboard кластера app"
+  value       = "http://chaos-dashboard.${local.traefik_app_public_ip}.sslip.io"
 }
 
 output "kibana_user" {
   description = "Логин Kibana (пользователь elastic)"
   value       = "elastic"
+}
+
+output "traefik_app_public_ip" {
+  value = local.traefik_app_public_ip
+}
+
+output "traefik_elastic_public_ip" {
+  value = local.traefik_elastic_public_ip
 }
 
 output "traefik_elastic_ip" {

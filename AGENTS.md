@@ -7,12 +7,17 @@
 
 # Установка VictoriaMetrics
 
-Только контекст `app`:
+Оба контекста, namespace `vmks`, chart 0.92.1. `app` — полный стек и Grafana (`vmks-values.yaml`). `elastic` — тот же chart без Grafana (`vmks-elastic-values.yaml`): CRD оператора для `VMAgent` и `VMServiceScrape`.
 
 ```bash
-helm upgrade --install vmks \
+helm --kube-context app upgrade --install vmks \
     oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack \
     --namespace vmks --create-namespace \
     --wait --version 0.92.1 --timeout 15m \
     -f vmks-values.yaml
+helm --kube-context elastic upgrade --install vmks \
+    oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack \
+    --namespace vmks --create-namespace \
+    --wait --version 0.92.1 --timeout 15m \
+    -f vmks-elastic-values.yaml
 ```

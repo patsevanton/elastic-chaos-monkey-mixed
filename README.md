@@ -13,10 +13,10 @@
 | Компонент | Куда |
 |---|---|
 | Elasticsearch 9.5.4 mixed ×3 | кластер `elastic`, зоны `a`/`b`/`d`, PVC **50 ГиБ** `yc-network-ssd`, heap 3 ГиБ |
-| Kibana 9.5.4 ×3 | Traefik `elastic`, без basic auth |
+| Kibana 9.5.4 ×3 | публичный NLB Traefik, `kibana.<IP>.sslip.io` |
 | loadgen ×3 | кластер `app`, spread по зонам |
-| vmks 0.92.1 | только `app`, namespace `vmks` |
-| Traefik 41.6.0 ×3 | оба кластера, internal NLB |
+| vmks 0.92.1 | `app` и `elastic`, namespace `vmks` |
+| Traefik 41.6.0 ×3 | оба кластера: internal NLB и публичный NLB |
 | Chaos Mesh 2.8.4 | оба кластера |
 
 Ноды без публичного IP, HDD, preemptible. `elastic`: 8 vCPU / 16 ГБ. `app`: 2 vCPU / 4 ГБ. SA `elastic-chaos-monkey`. Kubernetes **1.33**.
@@ -28,24 +28,46 @@
 ```bash
 export TF_VAR_folder_id=<folder id>
 terraform init && terraform apply
-sudo tailscale up --login-server=$(terraform output -raw headscale_url) \
-  --auth-key=$(terraform output -raw headscale_laptop_preauth) \
-  --accept-routes --force-reauth
 eval "$(terraform output -raw elastic_credentials_command)"
 eval "$(terraform output -raw app_credentials_command)"
 ```
 
-Traefik в оба контекста, chart 41.6.0: `-f traefik-elastic-values.yaml` в контексте `elastic`, `-f traefik-app-values.yaml` в контексте `app`.
-
-vmks только в `app` (команда в [AGENTS.md](AGENTS.md)). Затем в `app`:
+Traefik в оба контекста, chart 41.6.0 (OCI, `helm repo add` не нужен): `-f traefik-elastic-values.yaml` в контексте `elastic`, `-f traefik-app-values.yaml` в контексте `app`.
 
 ```bash
-kubectl --context app apply -f manifests/vminsert/nlb.yaml
+helm --kube-context elastic upgrade --install traefik oci://ghcr.io/traefik/helm/traefik \
+  --namespace traefik --create-namespace --version 41.6.0 \
+  -f traefik-elastic-values.yaml
+helm --kube-context app upgrade --install traefik oci://ghcr.io/traefik/helm/traefik \
+  --namespace traefik --create-namespace --version 41.6.0 \
+  -f traefik-app-values.yaml
+```
+
+vmks в оба контекста, chart 0.92.1, namespace `vmks`. Grafana и `chaos-mesh-admin-token` только в `app`. В `elastic` — тот же chart, без Grafana: CRD оператора нужны `VMAgent` и `VMServiceScrape`.
+
+```bash
+kubectl --context app create namespace vmks --dry-run=client -o yaml | kubectl --context app apply -f -
+kubectl --context app apply -f manifests/chaos-mesh/rbac.yaml
+kubectl --context app -n vmks wait --for=jsonpath='{.data.token}' secret/chaos-mesh-admin-token --timeout=60s
+helm --kube-context app upgrade --install vmks \
+    oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack \
+    --namespace vmks --create-namespace \
+    --wait --version 0.92.1 --timeout 15m \
+    -f vmks-values.yaml
+helm --kube-context elastic upgrade --install vmks \
+    oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack \
+    --namespace vmks --create-namespace \
+    --wait --version 0.92.1 --timeout 15m \
+    -f vmks-elastic-values.yaml
+kubectl --context app apply -f manifests/exporter/traefik-scrape.yaml
+NLB_SUBNET_ID="$(terraform output -raw nlb_subnet_id)" envsubst < manifests/vminsert/nlb.yaml \
+  | kubectl --context app apply -f -
 ```
 
 ECK и exporter только в `elastic`:
 
 ```bash
+helm repo add elastic https://helm.elastic.co
 helm --kube-context elastic upgrade --install elastic-operator elastic/eck-operator \
   --namespace elastic-system --create-namespace --version 3.5.0 --set replicaCount=3
 ./scripts/apply-eck.sh
@@ -55,7 +77,24 @@ kubectl --context elastic apply -f manifests/vmagent/vmagent.yaml
 
 Chaos Mesh 2.8.4 в оба контекста: `-f chaos-mesh-elastic-values.yaml` и `-f chaos-mesh-app-values.yaml`.
 
-loadgen в `app`: `helm --kube-context app upgrade --install loadgen loadgen/chart --namespace load --create-namespace`.
+```bash
+helm repo add chaos-mesh https://charts.chaos-mesh.org
+helm --kube-context elastic upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
+  --namespace chaos-mesh --create-namespace --version 2.8.4 \
+  -f chaos-mesh-elastic-values.yaml
+helm --kube-context app upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
+  --namespace chaos-mesh --create-namespace --version 2.8.4 \
+  -f chaos-mesh-app-values.yaml
+kubectl --context app apply -f manifests/exporter/chaos-mesh-scrape.yaml
+```
+
+loadgen в `app`, образ `loadgen:0.1.0` (не `latest`):
+
+```bash
+docker build -t loadgen:0.1.0 loadgen
+helm --kube-context app upgrade --install loadgen loadgen/chart \
+  --namespace load --create-namespace --set image=loadgen:0.1.0
+```
 
 ## Прогон
 

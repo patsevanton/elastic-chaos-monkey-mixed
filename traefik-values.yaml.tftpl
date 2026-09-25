@@ -10,6 +10,17 @@ topologySpreadConstraints:
     labelSelector:
       matchLabels:
         app.kubernetes.io/name: traefik
+ports:
+  web:
+    expose:
+      default: true
+      public: false
+  public:
+    port: 8001
+    expose:
+      default: false
+      public: true
+    exposedPort: 80
 service:
   annotations:
     yandex.cloud/load-balancer-type: internal
@@ -17,6 +28,10 @@ service:
   spec:
     type: LoadBalancer
     loadBalancerIP: ${traefik_ip}
+  additionalServices:
+    public:
+      type: LoadBalancer
+      loadBalancerIP: ${public_ip}
 metrics:
   prometheus:
     service:

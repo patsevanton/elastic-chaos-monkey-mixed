@@ -47,6 +47,7 @@ terraform.rc
 
 # Values-файлы, сгенерированные Terraform из *.yaml.tftpl
 vmks-values.yaml
+vmks-elastic-values.yaml
 traefik-values.yaml
 traefik-elastic-values.yaml
 traefik-app-values.yaml

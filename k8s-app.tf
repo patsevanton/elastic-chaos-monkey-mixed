@@ -31,6 +31,10 @@ resource "yandex_kubernetes_cluster" "app" {
   node_service_account_id = yandex_iam_service_account.elastic_chaos_monkey.id
   release_channel         = "STABLE"
 
+  # elastic уже занял дефолты 10.112.0.0/16 и 10.96.0.0/16
+  cluster_ipv4_range = "10.113.0.0/16"
+  service_ipv4_range = "10.97.0.0/16"
+
   depends_on = [
     time_sleep.wait_sa,
     time_sleep.wait_lb_release,
