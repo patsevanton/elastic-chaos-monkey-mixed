@@ -67,10 +67,7 @@ output "kibana_url" {
   value       = "http://kibana.${local.traefik_elastic_public_ip}.sslip.io"
 }
 
-output "elastic_url" {
-  description = "URL Elasticsearch через Traefik кластера elastic"
-  value       = "http://elastic.${local.traefik_elastic_ip}.sslip.io"
-}
+
 
 output "chaos_dashboard_url" {
   description = "Публичный URL Chaos Mesh Dashboard кластера elastic"
@@ -120,9 +117,11 @@ output "kibana_elastic_password_command" {
 output "public_ips" {
   description = "Все публичные IP стенда"
   value = {
-    app_cluster_api          = yandex_kubernetes_cluster.app.master[0].external_v4_address
-    elastic_cluster_api      = yandex_kubernetes_cluster.elastic_chaos.master[0].external_v4_address
-    traefik_app_public       = local.traefik_app_public_ip
-    traefik_elastic_public   = local.traefik_elastic_public_ip
+    app_cluster_api        = yandex_kubernetes_cluster.app.master[0].external_v4_address
+    elastic_cluster_api    = yandex_kubernetes_cluster.elastic_chaos.master[0].external_v4_address
+    traefik_app_public     = local.traefik_app_public_ip
+    traefik_elastic_public = local.traefik_elastic_public_ip
+    chaos_dashboard        = local.traefik_elastic_public_ip
+    chaos_dashboard_app    = local.traefik_app_public_ip
   }
 }
