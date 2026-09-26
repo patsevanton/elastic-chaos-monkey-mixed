@@ -14,7 +14,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const indexName = "load"
+const (
+	indexName     = "load"
+	indexShards   = 1
+	indexReplicas = 2
+)
 
 var (
 	bulkOKC    = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_bulk_ok_total"})
@@ -111,15 +115,51 @@ func main() {
 }
 
 func ensureIndex(es string) {
-	body := `{"settings":{"number_of_shards":1,"number_of_replicas":2}}`
-	req, _ := http.NewRequest(http.MethodPut, es+"/"+indexName, stringsReader(body))
+	create := fmt.Sprintf(`{"settings":{"number_of_shards":%d,"number_of_replicas":%d}}`, indexShards, indexReplicas)
+	for {
+		req, _ := http.NewRequest(http.MethodPut, es+"/"+indexName, stringsReader(create))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ensureIndex: %v, retry\n", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		code := resp.StatusCode
+		resp.Body.Close()
+		if code == http.StatusOK || code == http.StatusCreated {
+			return
+		}
+		if code == http.StatusBadRequest {
+			// resource_already_exists_exception: индекс уже существует.
+			// Логируем и доводим число реплик до indexReplicas, см. AGENTS.md.
+			fmt.Fprintf(os.Stderr, "ensureIndex: %s already exists (http %d), ensuring replicas\n", indexName, code)
+			if ensureReplicas(es) {
+				return
+			}
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "ensureIndex: PUT %s => http %d, retry\n", indexName, code)
+		time.Sleep(2 * time.Second)
+	}
+}
+
+func ensureReplicas(es string) bool {
+	body := fmt.Sprintf(`{"index":{"number_of_replicas":%d}}`, indexReplicas)
+	req, _ := http.NewRequest(http.MethodPut, es+"/"+indexName+"/_settings", stringsReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "ensureReplicas: %v\n", err)
+		return false
 	}
+	code := resp.StatusCode
 	resp.Body.Close()
+	if code >= 200 && code < 300 {
+		return true
+	}
+	fmt.Fprintf(os.Stderr, "ensureReplicas: http %d\n", code)
+	return false
 }
 
 func bulkLoop(es string) {

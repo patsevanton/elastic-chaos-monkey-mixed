@@ -4,6 +4,7 @@
 - `terraform apply` для переключения изоляции не применять: SG переключается CLI, иначе apply «чинит» эксперимент. Контракт — в [INFRASTRUCTURE.md](INFRASTRUCTURE.md).
 - Перед первым прогоном на кластере — `./scripts/verify-ng-sg-swap.sh "$(terraform output -raw zone_isolation_sg_id)" <zone> <node-group>` в контексте этого кластера, для каждой node group, которую будут изолировать. При `VERDICT: RECREATE` isolate/restore не использовать, переписать на `yc compute instance update-network-interface`.
 - `disable-zones` не чаще раза в 2 минуты на NLB — при retry выдержать паузу.
+- loadgen `ensureIndex` создаёт индекс `load` (1 primary / 2 replica, константы `indexShards`/`indexReplicas` в `loadgen/main.go`) бесконечным retry до готовности ES; при `resource_already_exists_exception` логирует в stderr и доводит реплики через `_settings`. После старта подов обязательно проверить логи (`kubectl --context app -n load logs -l app=loadgen`): при регулярных `ensureIndex: … retry` разобраться, почему ES/индекс недоступен, и не игнорировать.
 
 # Установка VictoriaMetrics
 
