@@ -50,6 +50,16 @@ spec:
                 limits:
                   cpu: "1"
                   memory: 2Gi
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: yc-network-ssd
+            resources:
+              requests:
+                storage: 20Gi
     - name: master-b
       count: 1
       config:
@@ -80,6 +90,16 @@ spec:
                 limits:
                   cpu: "1"
                   memory: 2Gi
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: yc-network-ssd
+            resources:
+              requests:
+                storage: 20Gi
     - name: master-d
       count: 1
       config:
@@ -110,6 +130,16 @@ spec:
                 limits:
                   cpu: "1"
                   memory: 2Gi
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: yc-network-ssd
+            resources:
+              requests:
+                storage: 20Gi
     - name: data-a
       count: 2
       config:
