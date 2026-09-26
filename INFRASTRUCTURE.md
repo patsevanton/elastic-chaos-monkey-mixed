@@ -1,6 +1,6 @@
 # Развёртывание инфраструктуры: Terraform
 
-Два Yandex Managed Kubernetes 1.33 в одной VPC. `elastic`: шесть node group, master 2 vCPU / 4 ГБ и data 8 vCPU / 16 ГБ, по одной в `ru-central1-a`/`b`/`d`. `app`: три node group 4 vCPU / 8 ГБ, по одной в тех же зонах. Ноды preemptible, HDD, без публичного IP. Egress приватных подсетей — один NAT Gateway. Публичные IP только у внешних NLB Traefik. Входа ingress-nginx нет. Между кластерами — internal NLB Traefik.
+Два Yandex Managed Kubernetes 1.33 в одной VPC. `elastic`: шесть node group, master 2 vCPU / 4 ГБ и data 8 vCPU / 16 ГБ, по одной в `ru-central1-a`/`b`/`d`. `app`: три node group 4 vCPU / 8 ГБ, по одной в тех же зонах. Ноды preemptible, HDD, без публичного IP. Egress приватных подсетей — один NAT Gateway. Публичные IP только у внешних NLB Traefik. Между кластерами — internal NLB Traefik.
 
 Service account: `elastic-chaos-monkey`.
 
@@ -16,7 +16,7 @@ Reserved internal IP в подсети `a`: Traefik `elastic` `10.0.1.33`, Traef
 
 ## Traefik
 
-Chart **41.6.0**, 3 реплики. На каждом кластере два Service: internal NLB (`web`) и внешний NLB (`public`). Кластер `elastic`: `traefik-elastic-values.yaml`. Кластер `app`: `traefik-app-values.yaml`. Ingress-nginx не ставить.
+Chart **41.6.0**, 3 реплики. На каждом кластере два Service: internal NLB (`web`) и внешний NLB (`public`). Кластер `elastic`: `traefik-elastic-values.yaml`. Кластер `app`: `traefik-app-values.yaml`.
 
 ## VictoriaMetrics
 

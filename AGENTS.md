@@ -4,7 +4,6 @@
 - `terraform apply` для переключения изоляции не применять: SG переключается CLI, иначе apply «чинит» эксперимент. Контракт — в [INFRASTRUCTURE.md](INFRASTRUCTURE.md).
 - Перед первым прогоном на кластере — `./scripts/verify-ng-sg-swap.sh "$(terraform output -raw zone_isolation_sg_id)" <zone> <node-group>` в контексте этого кластера, для каждой node group, которую будут изолировать. При `VERDICT: RECREATE` isolate/restore не использовать, переписать на `yc compute instance update-network-interface`.
 - `disable-zones` не чаще раза в 2 минуты на NLB — при retry выдержать паузу.
-- `./scripts/check-zone-b-down.sh` — ручная проверка изоляции зоны `ru-central1-b`. Не удалять.
 
 # Установка VictoriaMetrics
 

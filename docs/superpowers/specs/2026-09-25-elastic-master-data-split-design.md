@@ -34,7 +34,7 @@
 
 ## Elasticsearch
 
-Один ресурс ECK, имя `elastic`, версия 9.5.4. Шесть nodeSet, `count: 1`. `nodeSelector` `topology.kubernetes.io/zone` на зону nodeSet.
+Один ресурс ECK, имя `elastic`, версия 9.5.4. Master nodeSet `count: 1`, data nodeSet `count: 2` (data ×6, по 2 на зону). `nodeSelector` `topology.kubernetes.io/zone` на зону nodeSet.
 
 Master (`master-a`, `master-b`, `master-d`):
 
@@ -75,4 +75,4 @@ Voting-only и ingest на master не добавляем. Coordinating-only н�
 
 ## Проверка
 
-После apply: шесть нод `elastic` Ready, по зоне одна master и одна data; три ноды `app` без изменений. ES green. Master-pod'ы без PVC. Data-pod'ы с PVC 50 ГиБ. `_cat/nodes` показывает роли `m` и `di` в каждой зоне. Шарды индекса только на data, awareness по зоне.
+После apply: девять нод `elastic` Ready, по зоне одна master и две data; три ноды `app` без изменений. ES green. Master-pod'ы без PVC. Data-pod'ы с PVC 50 ГиБ. `_cat/nodes` показывает роли `m` и `di` в каждой зоне. Шарды индекса только на data, awareness по зоне.

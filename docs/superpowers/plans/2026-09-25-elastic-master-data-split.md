@@ -422,7 +422,7 @@ git commit -m "изоляция master и data node group зоны"
 
 Строка стенда:
 
-`| Elasticsearch 9.5.4 master ×3 + data ×3 | кластер elastic, зоны a/b/d; data PVC 50 ГиБ yc-network-ssd, heap 3 ГиБ; master без PVC, heap 1 ГиБ |`
+`| Elasticsearch 9.5.4 master ×3 + data ×6 | кластер elastic, зоны a/b/d, data по 2 на зону; data PVC 50 ГиБ yc-network-ssd, heap 3 ГиБ; master без PVC, heap 1 ГиБ |`
 
 Строка нод:
 

@@ -15,9 +15,7 @@ permission:
     "yc load-balancer network-load-balancer target-states*": allow
     "ping*": allow
     "./scripts/check-chaos.sh*": allow
-    "./scripts/check-zone-b-down.sh*": allow
     "bash scripts/check-chaos.sh*": allow
-    "bash scripts/check-zone-b-down.sh*": allow
 ---
 
 Только проверка. Не apply, не delete, не isolate, не restore.

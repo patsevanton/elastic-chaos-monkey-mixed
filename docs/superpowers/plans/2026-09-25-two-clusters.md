@@ -12,10 +12,10 @@
 
 ## Global Constraints
 
-- Kubernetes 1.33 и ingress-nginx не менять. Входа ingress-nginx нет, вход — Traefik chart 41.6.0.
+- Kubernetes 1.33 не менять. Вход — Traefik chart 41.6.0.
 - Ноды k8s без публичного IP. Egress приватных подсетей — один NAT Gateway и route table.
 - Загрузочные диски нод — HDD. Ноды preemptible.
-- PVC Elasticsearch — `yc-network-ssd` 50 ГиБ. Это исключение из правила HDD. Ingress-nginx в кластере нет, вход — Traefik.
+- PVC Elasticsearch — `yc-network-ssd` 50 ГиБ. Это исключение из правила HDD. Вход — Traefik.
 - VictoriaMetrics только в namespace `vmks`. В values отключить scrape и recording-правила control-plane Yandex Managed K8s (etcd, scheduler, controller-manager, `kube-scheduler.rules`).
 - Зону изолировать и чинить только скриптами, не `yc compute instance stop` и не `terraform apply`.
 - `disable-zones` не чаще раза в 2 минуты на один NLB.

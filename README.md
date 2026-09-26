@@ -4,7 +4,7 @@
 
 Критерии: search жив, index жив, нет потери документов, которые bulk принял. Порога нет: печатаем процент ошибок приложения.
 
-Путь: под `loadgen` → internal NLB Traefik кластера `elastic` (`10.0.1.33`) → Elasticsearch ClusterIP `:9200`. Прямого NLB Elasticsearch нет. Ingress-nginx нет.
+Путь: под `loadgen` → internal NLB Traefik кластера `elastic` (`10.0.1.33`) → Elasticsearch ClusterIP `:9200`. Прямого NLB Elasticsearch нет.
 
 Документ временный, 2 КБ: `id`, `ts`, `zone`, `body`. Состав полей будет переспрошен. Индекс `load`: 1 primary, 2 replica.
 
