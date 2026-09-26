@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,11 +17,9 @@ import (
 const indexName = "load"
 
 var (
-	bulkOK  atomic.Int64
-	bulkErr atomic.Int64
-	bulkOKC = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_bulk_ok_total"})
-	bulkErrC = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_bulk_err_total"})
-	searchOKC = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_search_ok_total"})
+	bulkOKC    = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_bulk_ok_total"})
+	bulkErrC   = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_bulk_err_total"})
+	searchOKC  = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_search_ok_total"})
 	searchErrC = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_search_err_total"})
 )
 
@@ -61,7 +58,6 @@ func postBulk(es string, body []byte) error {
 		ID string `json:"id"`
 	}
 	if err := json.Unmarshal(body, &meta); err != nil {
-		bulkErr.Add(1)
 		bulkErrC.Inc()
 		return err
 	}
@@ -71,14 +67,12 @@ func postBulk(es string, body []byte) error {
 	buf.WriteByte('\n')
 	resp, err := http.Post(es+"/"+indexName+"/_bulk", "application/x-ndjson", &buf)
 	if err != nil {
-		bulkErr.Add(1)
 		bulkErrC.Inc()
 		return err
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode >= 300 {
-		bulkErr.Add(1)
 		bulkErrC.Inc()
 		return fmt.Errorf("bulk %d", resp.StatusCode)
 	}
@@ -92,39 +86,12 @@ func postBulk(es string, body []byte) error {
 		} `json:"items"`
 	}
 	if err := json.Unmarshal(raw, &parsed); err != nil || parsed.Errors || len(parsed.Items) != 1 || parsed.Items[0].Index.Status >= 300 {
-		bulkErr.Add(1)
 		bulkErrC.Inc()
 		return fmt.Errorf("bulk item")
 	}
-	bulkOK.Add(1)
 	bulkOKC.Inc()
 	fmt.Printf("id %s\n", meta.ID)
 	return nil
-}
-
-func postBulkID(es, id string) (string, error) {
-	if err := postBulk(es, doc(id, time.Unix(0, 0).UTC(), "")); err != nil {
-		return "", err
-	}
-	return id, nil
-}
-
-func mgetFound(es, id string) bool {
-	resp, err := http.Post(es+"/"+indexName+"/_mget", "application/json", stringsReader(fmt.Sprintf(`{"ids":["%s"]}`, id)))
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-	var parsed struct {
-		Docs []struct {
-			Found bool   `json:"found"`
-			ID    string `json:"_id"`
-		} `json:"docs"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-		return false
-	}
-	return len(parsed.Docs) == 1 && parsed.Docs[0].Found && parsed.Docs[0].ID == id
 }
 
 func stringsReader(s string) *bytes.Reader { return bytes.NewReader([]byte(s)) }
@@ -158,6 +125,8 @@ func ensureIndex(es string) {
 func bulkLoop(es string) {
 	for i := 0; ; i++ {
 		id := fmt.Sprintf("%d-%d", time.Now().UnixNano(), i)
+		// zone пустая: под не знает свою зону, downward API и env ZONE нет.
+		// Паддинг body считается от этой пустой строки, размер документа остаётся 2048.
 		_ = postBulk(es, doc(id, time.Now(), ""))
 	}
 }
@@ -166,10 +135,8 @@ func searchLoop(es string) {
 	for {
 		resp, err := http.Post(es+"/"+indexName+"/_search", "application/json", stringsReader(`{"size":1,"query":{"match_all":{}}}`))
 		if err != nil || resp.StatusCode >= 300 {
-			searchErr.Add(1)
 			searchErrC.Inc()
 		} else {
-			searchOK.Add(1)
 			searchOKC.Inc()
 		}
 		if resp != nil {
@@ -177,8 +144,3 @@ func searchLoop(es string) {
 		}
 	}
 }
-
-var (
-	searchOK  atomic.Int64
-	searchErr atomic.Int64
-)

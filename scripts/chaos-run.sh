@@ -2,7 +2,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-STEP="${STEP_SECONDS:-600}"
+STEP="${STEP_SECONDS:-120}"
 KILL_EVERY="${KILL_EVERY:-30}"
 
 cleanup() {
@@ -28,8 +28,8 @@ delete_crs() {
 quiet() {
   delete_crs
   local start=$SECONDS
-  kubectl --context elastic -n elastic wait --for=jsonpath='{.status.health}'=green elasticsearch/elastic --timeout=600s || true
-  kubectl --context app -n load rollout status deployment/loadgen --timeout=600s || true
+  kubectl --context elastic -n elastic wait --for=jsonpath='{.status.health}'=green elasticsearch/elastic --timeout=120s || true
+  kubectl --context app -n load rollout status deployment/loadgen --timeout=120s || true
   local left=$((STEP - (SECONDS - start)))
   if [ "$left" -gt 0 ]; then sleep "$left"; fi
 }

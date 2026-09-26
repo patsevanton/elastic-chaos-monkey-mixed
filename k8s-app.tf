@@ -1,6 +1,6 @@
 resource "yandex_kubernetes_cluster" "app" {
   name       = "app"
-  folder_id  = local.folder_id
+  folder_id  = var.folder_id
   network_id = local.network_id
 
   master {

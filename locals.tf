@@ -1,5 +1,4 @@
 locals {
-  folder_id  = var.folder_id
   network_id = yandex_vpc_network.elastic_chaos.id
 
   subnet_a_id   = yandex_vpc_subnet.elastic_chaos_a.id

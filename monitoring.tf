@@ -83,7 +83,7 @@ output "chaos_dashboard_app_url" {
 }
 
 output "kibana_user" {
-  description = "Логин Kibana (пользователь elastic)"
+  description = "Логин Kibana, нужен как terraform output"
   value       = "elastic"
 }
 

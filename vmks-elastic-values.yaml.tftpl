@@ -23,10 +23,12 @@ vmcluster:
   enabled: false
 
 vmagent:
-  enabled: false
+  spec:
+    remoteWrite:
+      - url: http://10.0.1.35:8480/insert/0/prometheus
 
 kube-state-metrics:
-  enabled: false
+  enabled: true
 
 prometheus-node-exporter:
-  enabled: false
+  enabled: true

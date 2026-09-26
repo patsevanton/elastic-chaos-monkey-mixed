@@ -1,17 +1,17 @@
 resource "yandex_vpc_network" "elastic_chaos" {
   name      = "elastic-chaos-vpc"
-  folder_id = local.folder_id
+  folder_id = var.folder_id
 }
 
 resource "yandex_vpc_gateway" "nat" {
-  folder_id = local.folder_id
+  folder_id = var.folder_id
   name      = "elastic-chaos-nat"
 
   shared_egress_gateway {}
 }
 
 resource "yandex_vpc_route_table" "rt" {
-  folder_id  = local.folder_id
+  folder_id  = var.folder_id
   name       = "elastic-chaos-rt-nat"
   network_id = yandex_vpc_network.elastic_chaos.id
 
@@ -22,7 +22,7 @@ resource "yandex_vpc_route_table" "rt" {
 }
 
 resource "yandex_vpc_subnet" "elastic_chaos_a" {
-  folder_id      = local.folder_id
+  folder_id      = var.folder_id
   name           = "elastic-chaos-a"
   v4_cidr_blocks = ["10.0.1.0/24"]
   zone           = "ru-central1-a"
@@ -31,7 +31,7 @@ resource "yandex_vpc_subnet" "elastic_chaos_a" {
 }
 
 resource "yandex_vpc_subnet" "elastic_chaos_b" {
-  folder_id      = local.folder_id
+  folder_id      = var.folder_id
   name           = "elastic-chaos-b"
   v4_cidr_blocks = ["10.0.2.0/24"]
   zone           = "ru-central1-b"
@@ -40,7 +40,7 @@ resource "yandex_vpc_subnet" "elastic_chaos_b" {
 }
 
 resource "yandex_vpc_subnet" "elastic_chaos_d" {
-  folder_id      = local.folder_id
+  folder_id      = var.folder_id
   name           = "elastic-chaos-d"
   v4_cidr_blocks = ["10.0.3.0/24"]
   zone           = "ru-central1-d"

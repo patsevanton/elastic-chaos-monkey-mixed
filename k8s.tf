@@ -1,10 +1,10 @@
 resource "yandex_iam_service_account" "elastic_chaos_monkey" {
-  folder_id = local.folder_id
+  folder_id = var.folder_id
   name      = "elastic-chaos-monkey"
 }
 
 resource "yandex_resourcemanager_folder_iam_member" "elastic_chaos_monkey_editor" {
-  folder_id = local.folder_id
+  folder_id = var.folder_id
   role      = "editor"
   member    = "serviceAccount:${yandex_iam_service_account.elastic_chaos_monkey.id}"
 }
@@ -20,7 +20,7 @@ resource "time_sleep" "wait_sa" {
 
 resource "yandex_kubernetes_cluster" "elastic_chaos" {
   name       = "elastic"
-  folder_id  = local.folder_id
+  folder_id  = var.folder_id
   network_id = local.network_id
 
   master {

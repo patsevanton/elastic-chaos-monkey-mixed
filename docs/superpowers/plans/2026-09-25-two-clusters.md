@@ -238,7 +238,7 @@ vminsert оставить в кластере; NLB — отдельный ман
 
 - [ ] **Step 4: Outputs**
 
-`grafana_url` = `http://grafana.10.0.1.34.sslip.io` через local.
+`grafana_url` = `http://grafana.<публичный IP Traefik app>.sslip.io` через `local.traefik_app_public_ip`. Не internal `10.0.1.34`.
 `kibana_url` = `http://kibana.10.0.1.33.sslip.io`.
 Удалить output `es_nlb_ip`.
 `kibana_elastic_password_command`: secret `elastic-es-elastic-user`.
