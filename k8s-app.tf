@@ -176,8 +176,3 @@ resource "yandex_kubernetes_node_group" "app_d" {
 output "app_credentials_command" {
   value = "yc managed-kubernetes cluster get-credentials --id ${yandex_kubernetes_cluster.app.id} --external --force --context-name app"
 }
-
-output "app_cluster_external_ip" {
-  description = "Внешний IP API master кластера app"
-  value       = yandex_kubernetes_cluster.app.master[0].external_v4_address
-}

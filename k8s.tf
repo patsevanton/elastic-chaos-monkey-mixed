@@ -328,11 +328,6 @@ output "elastic_credentials_command" {
   value = "yc managed-kubernetes cluster get-credentials --id ${yandex_kubernetes_cluster.elastic_chaos.id} --external --force --context-name elastic"
 }
 
-output "elastic_cluster_external_ip" {
-  description = "Внешний IP API master кластера elastic"
-  value       = yandex_kubernetes_cluster.elastic_chaos.master[0].external_v4_address
-}
-
 output "nlb_subnet_id" {
   description = "Подсеть a для internal NLB"
   value       = local.subnet_a_id

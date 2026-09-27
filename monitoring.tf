@@ -84,24 +84,12 @@ output "kibana_user" {
   value       = "elastic"
 }
 
-output "traefik_app_public_ip" {
-  value = local.traefik_app_public_ip
-}
-
 output "traefik_elastic_public_ip" {
   value = local.traefik_elastic_public_ip
 }
 
 output "traefik_elastic_ip" {
   value = local.traefik_elastic_ip
-}
-
-output "traefik_app_ip" {
-  value = local.traefik_app_ip
-}
-
-output "vminsert_ip" {
-  value = local.vminsert_ip
 }
 
 output "grafana_admin_password_command" {
@@ -114,14 +102,12 @@ output "kibana_elastic_password_command" {
   value       = "kubectl --context elastic -n elastic get secret elastic-es-elastic-user -o jsonpath='{.data.elastic}' | base64 -d; echo"
 }
 
-output "public_ips" {
-  description = "Все публичные IP стенда"
-  value = {
-    app_cluster_api        = yandex_kubernetes_cluster.app.master[0].external_v4_address
-    elastic_cluster_api    = yandex_kubernetes_cluster.elastic_chaos.master[0].external_v4_address
-    traefik_app_public     = local.traefik_app_public_ip
-    traefik_elastic_public = local.traefik_elastic_public_ip
-    chaos_dashboard        = local.traefik_elastic_public_ip
-    chaos_dashboard_app    = local.traefik_app_public_ip
-  }
+output "public_ips_csv" {
+  description = "Все публичные IP стенда, каждый на новой строке"
+  value = join("\n", [
+    yandex_kubernetes_cluster.app.master[0].external_v4_address,
+    yandex_kubernetes_cluster.elastic_chaos.master[0].external_v4_address,
+    local.traefik_app_public_ip,
+    local.traefik_elastic_public_ip,
+  ])
 }
