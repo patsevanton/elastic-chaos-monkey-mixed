@@ -17,6 +17,34 @@ grafana:
       traefik.ingress.kubernetes.io/router.entrypoints: public
     hosts:
       - grafana.${ingress_ip}.sslip.io
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: loadgen
+          orgId: 1
+          folder: loadgen
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/loadgen
+        - name: es-exporter
+          orgId: 1
+          folder: es-exporter
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/es-exporter
+  dashboards:
+    loadgen:
+      loadgen:
+        url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/loadgen.json
+
+    es-exporter:
+      es-app-view:
+        url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/es-app-view.json
 
 defaultDashboards:
   sources:

@@ -1,0 +1,902 @@
+{
+  "title": "Elasticsearch: взгляд приложения",
+  "uid": "es-exporter-view",
+  "tags": [
+    "elasticsearch",
+    "app"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Приложение (loadgen): успех/ошибки",
+      "collapsed": false,
+      "panels": [
+        {
+          "title": "bulk: ошибки и успех (docs/s)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(loadgen_bulk_err_total{job=\"loadgen\"}[5m]))",
+              "legendFormat": "err"
+            },
+            {
+              "refId": "B",
+              "expr": "sum(rate(loadgen_bulk_ok_total{job=\"loadgen\"}[5m]))",
+              "legendFormat": "ok"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 1
+          }
+        },
+        {
+          "title": "bulk: доля ошибок (%)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * sum(rate(loadgen_bulk_err_total{job=\"loadgen\"}[5m])) / clamp_min(sum(rate(loadgen_bulk_ok_total{job=\"loadgen\"}[5m])) + sum(rate(loadgen_bulk_err_total{job=\"loadgen\"}[5m])), 1e-6)"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 1
+          }
+        },
+        {
+          "title": "search: ошибки и успех (req/s)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(loadgen_search_err_total{job=\"loadgen\"}[5m]))",
+              "legendFormat": "err"
+            },
+            {
+              "refId": "B",
+              "expr": "sum(rate(loadgen_search_ok_total{job=\"loadgen\"}[5m]))",
+              "legendFormat": "ok"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 9
+          }
+        },
+        {
+          "title": "search: доля ошибок (%)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * sum(rate(loadgen_search_err_total{job=\"loadgen\"}[5m])) / clamp_min(sum(rate(loadgen_search_ok_total{job=\"loadgen\"}[5m])) + sum(rate(loadgen_search_err_total{job=\"loadgen\"}[5m])), 1e-6)"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 9
+          }
+        }
+      ],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "row",
+      "title": "Latency Elasticsearch (внутри кластера)",
+      "collapsed": false,
+      "panels": [
+        {
+          "title": "search: query + fetch время (s/s, по всем докам)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(elasticsearch_indices_search_query_time_seconds{cluster=\"elastic\"}[5m]))",
+              "legendFormat": "query"
+            },
+            {
+              "refId": "B",
+              "expr": "sum(rate(elasticsearch_indices_search_fetch_time_seconds{cluster=\"elastic\"}[5m]))",
+              "legendFormat": "fetch"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 18
+          }
+        },
+        {
+          "title": "search: query + fetch время (ms/операцию)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "1000 * sum(rate(elasticsearch_indices_search_query_time_seconds{cluster=\"elastic\"}[5m])) / clamp_min(sum(rate(elasticsearch_indices_search_query_total{cluster=\"elastic\"}[5m])), 1e-6)",
+              "legendFormat": "query ms/op"
+            },
+            {
+              "refId": "B",
+              "expr": "1000 * sum(rate(elasticsearch_indices_search_fetch_time_seconds{cluster=\"elastic\"}[5m])) / clamp_min(sum(rate(elasticsearch_indices_search_fetch_total{cluster=\"elastic\"}[5m])), 1e-6)",
+              "legendFormat": "fetch ms/op"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 18
+          }
+        },
+        {
+          "title": "indexing время (ms/операцию)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "1000 * sum(rate(elasticsearch_indices_indexing_index_time_seconds_total{cluster=\"elastic\"}[5m])) / clamp_min(sum(rate(elasticsearch_indices_indexing_index_total{cluster=\"elastic\"}[5m])), 1e-6)",
+              "legendFormat": "indexing ms/op"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 26
+          }
+        }
+      ],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      }
+    },
+    {
+      "type": "row",
+      "title": "Пропускная способность и шарды",
+      "collapsed": false,
+      "panels": [
+        {
+          "title": "search: query/fetch rate (req/s)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(elasticsearch_indices_search_query_total{cluster=\"elastic\"}[5m]))",
+              "legendFormat": "query"
+            },
+            {
+              "refId": "B",
+              "expr": "sum(rate(elasticsearch_indices_search_fetch_total{cluster=\"elastic\"}[5m]))",
+              "legendFormat": "fetch"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 35
+          }
+        },
+        {
+          "title": "indexing: index rate (docs/s)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(elasticsearch_indices_indexing_index_total{cluster=\"elastic\"}[5m]))"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 35
+          }
+        },
+        {
+          "title": "unassigned / initializing / relocating shards",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(elasticsearch_cluster_health_unassigned_shards{cluster=\"elastic\"})",
+              "legendFormat": "unassigned"
+            },
+            {
+              "refId": "B",
+              "expr": "sum(elasticsearch_cluster_health_initializing_shards{cluster=\"elastic\"})",
+              "legendFormat": "initializing"
+            },
+            {
+              "refId": "C",
+              "expr": "sum(elasticsearch_cluster_health_relocating_shards{cluster=\"elastic\"})",
+              "legendFormat": "relocating"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 43
+          }
+        }
+      ],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      }
+    },
+    {
+      "type": "row",
+      "title": "Отбои и очереди (потери/задержки для приложения)",
+      "collapsed": false,
+      "panels": [
+        {
+          "title": "thread pool: rejections (ops/s)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (type) (rate(elasticsearch_thread_pool_rejected_count{cluster=\"elastic\"}[5m]) > 0)"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 52
+          }
+        },
+        {
+          "title": "thread pool: в очереди (по пулам indexing/search)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (type) (elasticsearch_thread_pool_queue_count{cluster=\"elastic\", type=~\"search|write|index\"})"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 52
+          }
+        },
+        {
+          "title": "pending tasks (master queue)",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(elasticsearch_cluster_health_number_of_pending_tasks{cluster=\"elastic\"})"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 60
+          }
+        }
+      ],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 51
+      }
+    },
+    {
+      "type": "row",
+      "title": "KPI: здоровье кластера и сохранность данных",
+      "collapsed": false,
+      "panels": [
+        {
+          "title": "cluster health",
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "не green",
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false,
+              "fields": ""
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(elasticsearch_cluster_health_status{cluster=\"elastic\", color=\"green\"})"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 69
+          }
+        },
+        {
+          "title": "unassigned shards",
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "No data",
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false,
+              "fields": ""
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(elasticsearch_cluster_health_unassigned_shards{cluster=\"elastic\"})"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 69
+          }
+        },
+        {
+          "title": "initializing shards",
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "No data",
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false,
+              "fields": ""
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(elasticsearch_cluster_health_initializing_shards{cluster=\"elastic\"})"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 77
+          }
+        },
+        {
+          "title": "documents (всего первичных)",
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "No data",
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false,
+              "fields": ""
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(max by (name) (elasticsearch_indices_docs_primary{cluster=\"elastic\", name=~\"elastic-es-data-.*\"}))"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 77
+          }
+        },
+        {
+          "title": "documents (всего с репликами)",
+          "type": "stat",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "No data",
+              "custom": {}
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "values": false,
+              "fields": ""
+            },
+            "colorMode": "value",
+            "graphMode": "area",
+            "textMode": "auto"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(max by (name) (elasticsearch_indices_docs_total{cluster=\"elastic\", name=~\"elastic-es-data-.*\"}))"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 85
+          }
+        }
+      ],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 68
+      }
+    }
+  ]
+}
