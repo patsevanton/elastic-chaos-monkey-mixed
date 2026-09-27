@@ -25,6 +25,14 @@ var (
 	bulkErrC   = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_bulk_err_total"})
 	searchOKC  = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_search_ok_total"})
 	searchErrC = prometheus.NewCounter(prometheus.CounterOpts{Name: "loadgen_search_err_total"})
+	bulkDurH   = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "loadgen_bulk_duration_seconds",
+		Buckets: prometheus.DefBuckets,
+	})
+	searchDurH = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "loadgen_search_duration_seconds",
+		Buckets: prometheus.DefBuckets,
+	})
 )
 
 func doc(id string, ts time.Time, zone string) []byte {
@@ -58,6 +66,8 @@ func doc(id string, ts time.Time, zone string) []byte {
 }
 
 func postBulk(es string, body []byte) error {
+	start := time.Now()
+	defer func() { bulkDurH.Observe(time.Since(start).Seconds()) }()
 	var meta struct {
 		ID string `json:"id"`
 	}
@@ -107,7 +117,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "ES_URL")
 		os.Exit(1)
 	}
-	prometheus.MustRegister(bulkOKC, bulkErrC, searchOKC, searchErrC)
+	prometheus.MustRegister(bulkOKC, bulkErrC, searchOKC, searchErrC, bulkDurH, searchDurH)
 	go http.ListenAndServe(":8080", promhttp.Handler())
 	ensureIndex(*es)
 	go searchLoop(*es)
@@ -173,7 +183,9 @@ func bulkLoop(es string) {
 
 func searchLoop(es string) {
 	for {
+		start := time.Now()
 		resp, err := http.Post(es+"/"+indexName+"/_search", "application/json", stringsReader(`{"size":1,"query":{"match_all":{}}}`))
+		searchDurH.Observe(time.Since(start).Seconds())
 		if err != nil || resp.StatusCode >= 300 {
 			searchErrC.Inc()
 		} else {

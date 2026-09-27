@@ -54,3 +54,4 @@ traefik-app-values.yaml
 chaos-mesh-values.yaml
 chaos-mesh-elastic-values.yaml
 chaos-mesh-app-values.yaml
+loadgen/loadgen
