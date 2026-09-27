@@ -1,5 +1,5 @@
 {
-  "title": "loadgen (app -> Elasticsearch)",
+  "title": "loadgen-app-elasticsearch",
   "uid": "loadgen-app-es",
   "tags": [
     "loadgen",

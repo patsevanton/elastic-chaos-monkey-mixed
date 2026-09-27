@@ -37,14 +37,6 @@ grafana:
           editable: true
           options:
             path: /var/lib/grafana/dashboards/es-exporter
-  dashboards:
-    loadgen:
-      loadgen:
-        url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/loadgen.json
-
-    es-exporter:
-      es-app-view:
-        url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/es-app-view.json
 
 defaultDashboards:
   sources:
@@ -54,6 +46,10 @@ defaultDashboards:
       url: https://grafana.com/api/dashboards/14191/revisions/1/download
     traefik-kubernetes:
       url: https://raw.githubusercontent.com/traefik/traefik/v3.7.13/contrib/grafana/traefik-kubernetes.json
+    loadgen:
+      url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/loadgen.json
+    es-exporter:
+      url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/es-app-view.json
 
 defaultDatasources:
   victoriametrics:
