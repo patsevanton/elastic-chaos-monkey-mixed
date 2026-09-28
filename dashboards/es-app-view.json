@@ -692,7 +692,7 @@
       "panels": [
         {
           "title": "cluster health",
-          "type": "stat",
+          "type": "timeseries",
           "datasource": {
             "type": "prometheus",
             "uid": "VictoriaMetrics"
@@ -701,21 +701,26 @@
             "defaults": {
               "unit": "short",
               "noValue": "не green",
-              "custom": {}
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
             },
             "overrides": []
           },
           "options": {
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "values": false,
-              "fields": ""
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
             },
-            "colorMode": "value",
-            "graphMode": "area",
-            "textMode": "auto"
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
           },
           "targets": [
             {
@@ -732,7 +737,7 @@
         },
         {
           "title": "unassigned shards",
-          "type": "stat",
+          "type": "timeseries",
           "datasource": {
             "type": "prometheus",
             "uid": "VictoriaMetrics"
@@ -741,21 +746,26 @@
             "defaults": {
               "unit": "short",
               "noValue": "No data",
-              "custom": {}
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
             },
             "overrides": []
           },
           "options": {
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "values": false,
-              "fields": ""
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
             },
-            "colorMode": "value",
-            "graphMode": "area",
-            "textMode": "auto"
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
           },
           "targets": [
             {
@@ -772,7 +782,7 @@
         },
         {
           "title": "initializing shards",
-          "type": "stat",
+          "type": "timeseries",
           "datasource": {
             "type": "prometheus",
             "uid": "VictoriaMetrics"
@@ -781,21 +791,26 @@
             "defaults": {
               "unit": "short",
               "noValue": "No data",
-              "custom": {}
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
             },
             "overrides": []
           },
           "options": {
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "values": false,
-              "fields": ""
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
             },
-            "colorMode": "value",
-            "graphMode": "area",
-            "textMode": "auto"
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
           },
           "targets": [
             {
@@ -812,7 +827,7 @@
         },
         {
           "title": "documents (всего первичных)",
-          "type": "stat",
+          "type": "timeseries",
           "datasource": {
             "type": "prometheus",
             "uid": "VictoriaMetrics"
@@ -821,21 +836,26 @@
             "defaults": {
               "unit": "short",
               "noValue": "No data",
-              "custom": {}
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
             },
             "overrides": []
           },
           "options": {
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "values": false,
-              "fields": ""
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
             },
-            "colorMode": "value",
-            "graphMode": "area",
-            "textMode": "auto"
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
           },
           "targets": [
             {
@@ -852,7 +872,7 @@
         },
         {
           "title": "documents (всего с репликами)",
-          "type": "stat",
+          "type": "timeseries",
           "datasource": {
             "type": "prometheus",
             "uid": "VictoriaMetrics"
@@ -861,21 +881,26 @@
             "defaults": {
               "unit": "short",
               "noValue": "No data",
-              "custom": {}
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
             },
             "overrides": []
           },
           "options": {
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "values": false,
-              "fields": ""
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
             },
-            "colorMode": "value",
-            "graphMode": "area",
-            "textMode": "auto"
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
           },
           "targets": [
             {

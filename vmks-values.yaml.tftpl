@@ -40,14 +40,10 @@ grafana:
 
 defaultDashboards:
   sources:
-    elasticsearch-exporter-cluster:
-      url: https://raw.githubusercontent.com/prometheus-community/elasticsearch_exporter/v1.9.0/elasticsearch-mixin/compiled/dashboards/cluster.json
-    elasticsearch-exporter-quickstart:
-      url: https://grafana.com/api/dashboards/14191/revisions/1/download
     traefik-kubernetes:
       url: https://raw.githubusercontent.com/traefik/traefik/v3.7.13/contrib/grafana/traefik-kubernetes.json
     loadgen:
-      url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/loadgen.json
+      url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/elastic-loadgen-app.json
     es-exporter:
       url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/es-app-view.json
 

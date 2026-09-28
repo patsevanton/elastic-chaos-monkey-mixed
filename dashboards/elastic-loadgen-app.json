@@ -1,6 +1,6 @@
 {
-  "title": "loadgen-app-elasticsearch",
-  "uid": "loadgen-app-es",
+  "title": "elastic-loadgen-app",
+  "uid": "elastic-loadgen-app",
   "tags": [
     "loadgen",
     "elasticsearch",
