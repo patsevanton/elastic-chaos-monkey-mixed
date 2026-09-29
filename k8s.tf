@@ -9,12 +9,25 @@ resource "yandex_resourcemanager_folder_iam_member" "elastic_chaos_monkey_editor
   member    = "serviceAccount:${yandex_iam_service_account.elastic_chaos_monkey.id}"
 }
 
+resource "yandex_resourcemanager_folder_iam_member" "elastic_chaos_monkey_tunnel_agent" {
+  folder_id = var.folder_id
+  role      = "k8s.tunnelClusters.agent"
+  member    = "serviceAccount:${yandex_iam_service_account.elastic_chaos_monkey.id}"
+}
+
+resource "yandex_resourcemanager_folder_iam_member" "elastic_chaos_monkey_public_admin" {
+  folder_id = var.folder_id
+  role      = "vpc.publicAdmin"
+  member    = "serviceAccount:${yandex_iam_service_account.elastic_chaos_monkey.id}"
+}
 
 resource "time_sleep" "wait_sa" {
   create_duration = "20s"
   depends_on = [
     yandex_iam_service_account.elastic_chaos_monkey,
     yandex_resourcemanager_folder_iam_member.elastic_chaos_monkey_editor,
+    yandex_resourcemanager_folder_iam_member.elastic_chaos_monkey_tunnel_agent,
+    yandex_resourcemanager_folder_iam_member.elastic_chaos_monkey_public_admin,
   ]
 }
 
@@ -50,6 +63,10 @@ resource "yandex_kubernetes_cluster" "elastic_chaos" {
   service_account_id      = yandex_iam_service_account.elastic_chaos_monkey.id
   node_service_account_id = yandex_iam_service_account.elastic_chaos_monkey.id
   release_channel         = "STABLE"
+
+  network_implementation {
+    cilium {}
+  }
 
   # Зависимость от ожидания применения IAM-ролей.
   # При destroy кластер должен удалиться ДО time_sleep.wait_lb_release,
