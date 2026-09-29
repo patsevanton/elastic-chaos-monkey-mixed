@@ -45,6 +45,14 @@ grafana:
           editable: true
           options:
             path: /var/lib/grafana/dashboards/cilium
+        - name: goldpinger
+          orgId: 1
+          folder: goldpinger
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/goldpinger
 
 defaultDashboards:
   sources:
@@ -56,6 +64,8 @@ defaultDashboards:
       url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/es-app-view.json
     cilium:
       url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/cilium-node-latency.json
+    goldpinger:
+      url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/goldpinger.json
 
 defaultDatasources:
   victoriametrics:

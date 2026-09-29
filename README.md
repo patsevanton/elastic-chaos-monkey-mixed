@@ -18,6 +18,7 @@
 | vmks 0.92.1 | `app` и `elastic`, namespace `vmks` |
 | Traefik 41.6.0 ×3 | оба кластера: internal NLB и публичный NLB |
 | Chaos Mesh 2.8.4 | оба кластера |
+| goldpinger 1.1.3 | оба кластера, DaemonSet, namespace `goldpinger` |
 
 Ноды без публичного IP, HDD, preemptible. `elastic`: master 2 vCPU / 4 ГБ, data 8 vCPU / 16 ГБ. `app`: 4 vCPU / 8 ГБ. SA `elastic-chaos-monkey`. Kubernetes **1.33**.
 
@@ -86,6 +87,21 @@ helm --kube-context app upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
   --namespace chaos-mesh --create-namespace --version 2.8.4 \
   -f chaos-mesh-app-values.yaml
 kubectl --context app apply -f manifests/exporter/chaos-mesh-scrape.yaml
+```
+
+goldpinger в оба контекста, chart 1.1.3 (image `bloomberg/goldpinger:3.11.3`), DaemonSet: пингует поды друг друга и отдаёт метрики на `:8080`. Метрики с обоих кластеров попадают в VictoriaMetrics кластера `app` (в `elastic` vmagent remote-write на `vminsert`).
+
+```bash
+helm repo add goldpinger https://bloomberg.github.io/goldpinger
+helm repo update
+helm --kube-context app upgrade --install goldpinger goldpinger/goldpinger \
+    --namespace goldpinger --create-namespace \
+    --version 1.1.3 -f goldpinger-values.yaml
+helm --kube-context elastic upgrade --install goldpinger goldpinger/goldpinger \
+    --namespace goldpinger --create-namespace \
+    --version 1.1.3 -f goldpinger-values.yaml
+kubectl --context app apply -f manifests/goldpinger/goldpinger-scrape.yaml
+kubectl --context elastic apply -f manifests/goldpinger/goldpinger-scrape.yaml
 ```
 
 loadgen в `app`, образ `ghcr.io/patsevanton/elastic-chaos-monkey-mixed` (собирается workflow `.github/workflows/docker.yml` при push в `main`, публикуется в GHCR; тег фиксирован в `loadgen/chart/values.yaml`):

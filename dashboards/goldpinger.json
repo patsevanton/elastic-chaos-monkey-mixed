@@ -1,0 +1,272 @@
+{
+  "title": "goldpinger",
+  "uid": "goldpinger",
+  "tags": [
+    "goldpinger",
+    "network",
+    "chaos"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "VictoriaMetrics"
+        },
+        "query": "label_values(goldpinger_nodes_health_total, cluster)",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Здоровье узлов",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false,
+      "id": 1
+    },
+    {
+      "type": "timeseries",
+      "title": "healthy / unhealthy узлов",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum by (status) (goldpinger_nodes_health_total{cluster=~\"$cluster\"})",
+          "legendFormat": "{{ status }}",
+          "refId": "A"
+        }
+      ],
+      "id": 2
+    },
+    {
+      "type": "timeseries",
+      "title": "cluster health (1 = все проверки прошли)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1,
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "max(goldpinger_cluster_health_total{cluster=~\"$cluster\"})",
+          "legendFormat": "healthy",
+          "refId": "A"
+        }
+      ],
+      "id": 3
+    },
+    {
+      "type": "row",
+      "title": "Latency pod-to-pod",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "collapsed": false,
+      "id": 4
+    },
+    {
+      "type": "timeseries",
+      "title": "peer response time (p50/p90/p99)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(goldpinger_peers_response_time_s_bucket{cluster=~\"$cluster\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(goldpinger_peers_response_time_s_bucket{cluster=~\"$cluster\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p90",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(goldpinger_peers_response_time_s_bucket{cluster=~\"$cluster\"}[$__rate_interval])) by (le))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "id": 5
+    },
+    {
+      "type": "heatmap",
+      "title": "peer response time heatmap",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(goldpinger_peers_response_time_s_bucket{cluster=~\"$cluster\"}[$__rate_interval])) by (le)",
+          "legendFormat": "{{ le }}",
+          "format": "heatmap",
+          "refId": "A"
+        }
+      ],
+      "id": 6
+    },
+    {
+      "type": "row",
+      "title": "Ошибки",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "collapsed": false,
+      "id": 7
+    },
+    {
+      "type": "timeseries",
+      "title": "errors rate (по типам)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum by (type) (rate(goldpinger_errors_total{cluster=~\"$cluster\"}[$__rate_interval]))",
+          "legendFormat": "{{ type }}",
+          "refId": "A"
+        }
+      ],
+      "id": 8
+    },
+    {
+      "type": "timeseries",
+      "title": "calls rate (made/received)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "VictoriaMetrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "sum by (group) (rate(goldpinger_stats_total{cluster=~\"$cluster\"}[$__rate_interval]))",
+          "legendFormat": "{{ group }}",
+          "refId": "A"
+        }
+      ],
+      "id": 9
+    }
+  ]
+}

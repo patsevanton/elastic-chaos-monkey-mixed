@@ -1,0 +1,25 @@
+image:
+  repository: bloomberg/goldpinger
+  tag: "3.11.3"
+
+rbac:
+  create: true
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceMonitor:
+  enabled: false
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi

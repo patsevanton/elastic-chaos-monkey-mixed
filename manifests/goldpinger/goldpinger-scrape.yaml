@@ -1,0 +1,15 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: goldpinger
+  namespace: goldpinger
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: goldpinger
+  namespaceSelector:
+    matchNames:
+      - goldpinger
+  endpoints:
+    - port: http
+      interval: 20s
