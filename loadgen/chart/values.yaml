@@ -3,4 +3,4 @@ image:
   tag: "1.1.0"
   pullPolicy: IfNotPresent
 esURL: http://elastic.10.0.1.33.sslip.io
-replicaCount: 3
+replicaCount: 60

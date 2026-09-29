@@ -1,6 +1,6 @@
 {
-  "title": "es-app-view",
-  "uid": "es-exporter-view",
+  "title": "elastic-app",
+  "uid": "elastic-app",
   "tags": [
     "elasticsearch",
     "app"
