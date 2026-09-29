@@ -61,7 +61,7 @@ defaultDashboards:
     loadgen:
       url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/elastic-loadgen-app.json
     es-exporter:
-      url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/es-app-view.json
+      url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/elastic-app.json
     cilium:
       url: https://raw.githubusercontent.com/patsevanton/elastic-chaos-monkey-mixed/main/dashboards/cilium-node-latency.json
     goldpinger:
@@ -186,6 +186,8 @@ vmcluster:
 
 vmagent:
   spec:
+    externalLabels:
+      cluster_name: app
     replicaCount: 2
     scrapeInterval: 20s
     podDisruptionBudget:

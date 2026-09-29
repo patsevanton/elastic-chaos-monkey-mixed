@@ -23,7 +23,7 @@
           "type": "prometheus",
           "uid": "VictoriaMetrics"
         },
-        "query": "label_values(loadgen_bulk_ok_total, cluster)",
+        "query": "label_values(loadgen_bulk_ok_total, cluster_name)",
         "refresh": 1,
         "includeAll": false,
         "multi": false
@@ -69,7 +69,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(loadgen_bulk_err_total{cluster=~\"$cluster\"}[1m])) / clamp_min(sum(rate(loadgen_bulk_ok_total{cluster=~\"$cluster\"}[1m])) + sum(rate(loadgen_bulk_err_total{cluster=~\"$cluster\"}[1m])), 1e-9)",
+          "expr": "sum(rate(loadgen_bulk_err_total{cluster_name=~\"$cluster\"}[1m])) / clamp_min(sum(rate(loadgen_bulk_ok_total{cluster_name=~\"$cluster\"}[1m])) + sum(rate(loadgen_bulk_err_total{cluster_name=~\"$cluster\"}[1m])), 1e-9)",
           "legendFormat": "bulk err %",
           "refId": "A"
         }
@@ -101,17 +101,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(loadgen_bulk_duration_seconds_bucket{cluster=~\"$cluster\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(loadgen_bulk_duration_seconds_bucket{cluster_name=~\"$cluster\"}[1m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.90, sum(rate(loadgen_bulk_duration_seconds_bucket{cluster=~\"$cluster\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(loadgen_bulk_duration_seconds_bucket{cluster_name=~\"$cluster\"}[1m])) by (le))",
           "legendFormat": "p90",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(loadgen_bulk_duration_seconds_bucket{cluster=~\"$cluster\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(loadgen_bulk_duration_seconds_bucket{cluster_name=~\"$cluster\"}[1m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -143,12 +143,12 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(loadgen_bulk_ok_total{cluster=~\"$cluster\"}[1m]))",
+          "expr": "sum(rate(loadgen_bulk_ok_total{cluster_name=~\"$cluster\"}[1m]))",
           "legendFormat": "ok",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(loadgen_bulk_err_total{cluster=~\"$cluster\"}[1m]))",
+          "expr": "sum(rate(loadgen_bulk_err_total{cluster_name=~\"$cluster\"}[1m]))",
           "legendFormat": "err",
           "refId": "B"
         }
@@ -193,7 +193,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(loadgen_search_err_total{cluster=~\"$cluster\"}[1m])) / clamp_min(sum(rate(loadgen_search_ok_total{cluster=~\"$cluster\"}[1m])) + sum(rate(loadgen_search_err_total{cluster=~\"$cluster\"}[1m])), 1e-9)",
+          "expr": "sum(rate(loadgen_search_err_total{cluster_name=~\"$cluster\"}[1m])) / clamp_min(sum(rate(loadgen_search_ok_total{cluster_name=~\"$cluster\"}[1m])) + sum(rate(loadgen_search_err_total{cluster_name=~\"$cluster\"}[1m])), 1e-9)",
           "legendFormat": "search err %",
           "refId": "A"
         }
@@ -225,17 +225,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(loadgen_search_duration_seconds_bucket{cluster=~\"$cluster\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(loadgen_search_duration_seconds_bucket{cluster_name=~\"$cluster\"}[1m])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.90, sum(rate(loadgen_search_duration_seconds_bucket{cluster=~\"$cluster\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(loadgen_search_duration_seconds_bucket{cluster_name=~\"$cluster\"}[1m])) by (le))",
           "legendFormat": "p90",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(loadgen_search_duration_seconds_bucket{cluster=~\"$cluster\"}[1m])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(loadgen_search_duration_seconds_bucket{cluster_name=~\"$cluster\"}[1m])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -267,12 +267,12 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(loadgen_search_ok_total{cluster=~\"$cluster\"}[1m]))",
+          "expr": "sum(rate(loadgen_search_ok_total{cluster_name=~\"$cluster\"}[1m]))",
           "legendFormat": "ok",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(loadgen_search_err_total{cluster=~\"$cluster\"}[1m]))",
+          "expr": "sum(rate(loadgen_search_err_total{cluster_name=~\"$cluster\"}[1m]))",
           "legendFormat": "err",
           "refId": "B"
         }

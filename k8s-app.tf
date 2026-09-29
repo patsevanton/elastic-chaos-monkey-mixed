@@ -63,6 +63,7 @@ resource "yandex_kubernetes_node_group" "app_a" {
 
   instance_template {
     platform_id = "standard-v3"
+    name        = "rc1a-app-{instance.short_id}"
 
     network_interface {
       nat        = false
@@ -107,6 +108,7 @@ resource "yandex_kubernetes_node_group" "app_b" {
 
   instance_template {
     platform_id = "standard-v3"
+    name        = "rc1b-app-{instance.short_id}"
 
     network_interface {
       nat        = false
@@ -151,6 +153,7 @@ resource "yandex_kubernetes_node_group" "app_d" {
 
   instance_template {
     platform_id = "standard-v3"
+    name        = "rc1d-app-{instance.short_id}"
 
     network_interface {
       nat        = false

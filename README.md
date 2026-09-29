@@ -73,7 +73,6 @@ helm --kube-context elastic upgrade --install elastic-operator elastic/eck-opera
   --namespace elastic-system --create-namespace --version 3.5.0 --set replicaCount=3
 ./scripts/apply-eck.sh
 kubectl --context elastic apply -f manifests/exporter/elasticsearch-exporter.yaml
-kubectl --context elastic apply -f manifests/vmagent/vmagent.yaml
 ```
 
 Chaos Mesh 2.8.4 в оба контекста: `-f chaos-mesh-elastic-values.yaml` и `-f chaos-mesh-app-values.yaml`.
@@ -102,6 +101,8 @@ helm --kube-context elastic upgrade --install goldpinger goldpinger/goldpinger \
     --version 1.1.3 -f goldpinger-values.yaml
 kubectl --context app apply -f manifests/goldpinger/goldpinger-scrape.yaml
 kubectl --context elastic apply -f manifests/goldpinger/goldpinger-scrape.yaml
+kubectl --context app apply -f manifests/exporter/cilium-scrape.yaml
+kubectl --context elastic apply -f manifests/exporter/cilium-scrape.yaml
 ```
 
 loadgen в `app`, образ `ghcr.io/patsevanton/elastic-chaos-monkey-mixed` (собирается workflow `.github/workflows/docker.yml` при push в `main`, публикуется в GHCR; тег фиксирован в `loadgen/chart/values.yaml`):

@@ -23,7 +23,7 @@
           "type": "prometheus",
           "uid": "VictoriaMetrics"
         },
-        "query": "label_values(goldpinger_nodes_health_total, cluster)",
+        "query": "label_values(goldpinger_nodes_health_total, cluster_name)",
         "refresh": 1,
         "includeAll": false,
         "multi": false
@@ -68,7 +68,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (status) (goldpinger_nodes_health_total{cluster=~\"$cluster\"})",
+          "expr": "sum by (status) (goldpinger_nodes_health_total{cluster_name=~\"$cluster\"})",
           "legendFormat": "{{ status }}",
           "refId": "A"
         }
@@ -102,7 +102,7 @@
       },
       "targets": [
         {
-          "expr": "max(goldpinger_cluster_health_total{cluster=~\"$cluster\"})",
+          "expr": "max(goldpinger_cluster_health_total{cluster_name=~\"$cluster\"})",
           "legendFormat": "healthy",
           "refId": "A"
         }
@@ -146,17 +146,17 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum(rate(goldpinger_peers_response_time_s_bucket{cluster=~\"$cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.50, sum(rate(goldpinger_peers_response_time_s_bucket{cluster_name=~\"$cluster\"}[$__rate_interval])) by (le))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.90, sum(rate(goldpinger_peers_response_time_s_bucket{cluster=~\"$cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.90, sum(rate(goldpinger_peers_response_time_s_bucket{cluster_name=~\"$cluster\"}[$__rate_interval])) by (le))",
           "legendFormat": "p90",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum(rate(goldpinger_peers_response_time_s_bucket{cluster=~\"$cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99, sum(rate(goldpinger_peers_response_time_s_bucket{cluster_name=~\"$cluster\"}[$__rate_interval])) by (le))",
           "legendFormat": "p99",
           "refId": "C"
         }
@@ -184,7 +184,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(goldpinger_peers_response_time_s_bucket{cluster=~\"$cluster\"}[$__rate_interval])) by (le)",
+          "expr": "sum(rate(goldpinger_peers_response_time_s_bucket{cluster_name=~\"$cluster\"}[$__rate_interval])) by (le)",
           "legendFormat": "{{ le }}",
           "format": "heatmap",
           "refId": "A"
@@ -229,7 +229,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (type) (rate(goldpinger_errors_total{cluster=~\"$cluster\"}[$__rate_interval]))",
+          "expr": "sum by (type) (rate(goldpinger_errors_total{cluster_name=~\"$cluster\"}[$__rate_interval]))",
           "legendFormat": "{{ type }}",
           "refId": "A"
         }
@@ -261,7 +261,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (group) (rate(goldpinger_stats_total{cluster=~\"$cluster\"}[$__rate_interval]))",
+          "expr": "sum by (group) (rate(goldpinger_stats_total{cluster_name=~\"$cluster\"}[$__rate_interval]))",
           "legendFormat": "{{ group }}",
           "refId": "A"
         }

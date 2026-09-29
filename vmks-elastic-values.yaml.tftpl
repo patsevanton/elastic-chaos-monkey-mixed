@@ -24,6 +24,9 @@ vmcluster:
 
 vmagent:
   spec:
+    externalLabels:
+      cluster_name: elastic
+    selectAllByDefault: true
     remoteWrite:
       - url: http://10.0.1.35:8480/insert/0/prometheus
 

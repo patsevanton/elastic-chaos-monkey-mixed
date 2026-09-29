@@ -95,6 +95,7 @@ resource "yandex_kubernetes_node_group" "elastic_master_a" {
 
   instance_template {
     platform_id = "standard-v3"
+    name        = "rc1a-elastic-master-{instance.short_id}"
 
     network_interface {
       nat        = false
@@ -139,6 +140,7 @@ resource "yandex_kubernetes_node_group" "elastic_master_b" {
 
   instance_template {
     platform_id = "standard-v3"
+    name        = "rc1b-elastic-master-{instance.short_id}"
 
     network_interface {
       nat        = false
@@ -183,6 +185,7 @@ resource "yandex_kubernetes_node_group" "elastic_master_d" {
 
   instance_template {
     platform_id = "standard-v3"
+    name        = "rc1d-elastic-master-{instance.short_id}"
 
     network_interface {
       nat        = false
@@ -227,6 +230,7 @@ resource "yandex_kubernetes_node_group" "elastic_data_a" {
 
   instance_template {
     platform_id = "standard-v3"
+    name        = "rc1a-elastic-data-{instance.short_id}"
 
     network_interface {
       nat        = false
@@ -271,6 +275,7 @@ resource "yandex_kubernetes_node_group" "elastic_data_b" {
 
   instance_template {
     platform_id = "standard-v3"
+    name        = "rc1b-elastic-data-{instance.short_id}"
 
     network_interface {
       nat        = false
@@ -315,6 +320,7 @@ resource "yandex_kubernetes_node_group" "elastic_data_d" {
 
   instance_template {
     platform_id = "standard-v3"
+    name        = "rc1d-elastic-data-{instance.short_id}"
 
     network_interface {
       nat        = false
