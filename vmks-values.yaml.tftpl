@@ -1,8 +1,32 @@
 grafana:
-  replicas: 1
+  replicas: 3
+  deploymentStrategy:
+    type: Recreate
+    rollingUpdate: null
   plugins:
     - chaosmeshorg-datasource@3.0.0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - topologyKey: topology.kubernetes.io/zone
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: grafana
+              app.kubernetes.io/instance: vmks
   grafana.ini:
+    database:
+      type: postgres
+      host: pg-grafana-rw.vmks.svc.cluster.local:5432
+      name: grafana
+      user: app
+      ssl_mode: require
     plugins:
       allow_loading_unsigned_plugins: chaosmeshorg-datasource
   envValueFrom:
@@ -10,6 +34,10 @@ grafana:
       secretKeyRef:
         name: chaos-mesh-admin-token
         key: token
+    GF_DATABASE_PASSWORD:
+      secretKeyRef:
+        name: pg-grafana-app
+        key: password
   ingress:
     enabled: true
     ingressClassName: traefik

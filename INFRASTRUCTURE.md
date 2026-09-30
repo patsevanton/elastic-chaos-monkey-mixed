@@ -34,9 +34,17 @@ Restore возвращает сохранённые SG и делает `enable-z
 
 `disable-zones` не чаще раза в 2 минуты на один NLB.
 
+## Grafana и CloudNativePG
+
+Grafana на кластере `app` — 3 реплики с `required` podAntiAffinity по `topology.kubernetes.io/zone` (жёстко по одной на зону `a`/`b`/`d`): гибель ноды зоны оставляет под Grafana `Pending` до восстановления ноды. Состояние (аннотации, пользователи, сессии) вынесено из SQLite в общий PostgreSQL — PVC у Grafana нет.
+
+PostgreSQL: CloudNativePG, оператор chart **0.25.0** (оператор 1.26.1) в namespace `cnpg-system`, 2 реплики с anti-affinity по зонам. Кластер `pg-grafana` в namespace `vmks`: 3 инстанса PG **17.5-22**, `topologyKey` по зоне, PVC 10 ГиБ `yc-network-hdd`, образ `ghcr.io/cloudnative-pg/postgresql:17.5-22-bookworm`. Синхронная репликация `method: any`, `number: 1`, `dataDurability: preferred`. Без бэкапов. Границу кластера не расширяет, в chaos-сценарии не входит.
+
+Подключение Grafana: `pg-grafana-rw.vmks.svc.cluster.local:5432`, БД `grafana`, пользователь `app`, пароль из секрета `pg-grafana-app`. Установка — `./scripts/apply-cnpg.sh` (идемпотентно).
+
 ## Аннотации Grafana
 
-Изоляция SG и chaos-шаги отмечаются аннотациями в Grafana (`scripts/annotate-grafana.sh`, `POST /api/annotations`, basic-auth `admin` + secret `vmks-grafana`). `isolate-zone.sh`/`restore-zone.sh` ставят пару start/end на каждую изменяемую node group, `chaos-run.sh` — на шаги pod-kill, loss, delay и isolate. Теги: `chaos`/`sg`, зона, шаг, фаза. Дашборды (`cilium-node-latency`, `elasticsearch-cluster`, `elastic-loadgen-app`, `goldpinger`) показывают их слоем «Chaos» (фильтр по тегам `chaos`, `sg`). Недоступен Grafana API — прогон прерывается.
+Изоляция SG и chaos-шаги отмечаются аннотациями в Grafana (`scripts/annotate-grafana.sh`, `POST /api/annotations`, basic-auth `admin` + secret `vmks-grafana`). `isolate-zone.sh`/`restore-zone.sh` ставят пару start/end на каждую изменяемую node group, `chaos-run.sh` — на шаги pod-kill, loss, delay и isolate. Теги: `chaos`/`sg`, зона, шаг, фаза. Дашборды (`cilium-node-latency`, `elasticsearch-cluster`, `elastic-loadgen-app`, `goldpinger`) показывают их слоем «Chaos» (фильтр по тегам `chaos`, `sg`). Недоступен Grafana API — прогон прерывается. Аннотации хранятся в PostgreSQL, поэтому переживают пересоздание подов Grafana.
 
 ## Требования
 

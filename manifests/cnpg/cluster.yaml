@@ -1,0 +1,31 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg-grafana
+  namespace: vmks
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.5-22-bookworm
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: topology.kubernetes.io/zone
+    podAntiAffinityType: required
+  storage:
+    storageClass: yc-network-hdd
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  bootstrap:
+    initdb:
+      database: grafana
+      owner: app
+  postgresql:
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: preferred
