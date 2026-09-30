@@ -12,7 +12,7 @@
 
 | Компонент | Куда |
 |---|---|
-| Elasticsearch 9.5.4 master ×3 + data ×6 | кластер `elastic`, зоны `a`/`b`/`d`, data по 2 на зону; data PVC **50 ГиБ** `yc-network-ssd`, heap 3 ГиБ; master PVC **20 ГиБ** `yc-network-ssd`, heap 1 ГиБ |
+| Elasticsearch 9.5.4 master ×3 + data ×6 | кластер `elastic`, зоны `a`/`b`/`d`, data по 2 на зону; data PVC **50 ГиБ** `yc-network-hdd`, heap 2 ГиБ; master PVC **20 ГиБ** `yc-network-hdd`, heap 1 ГиБ |
 | Kibana 9.5.4 ×3 | публичный NLB Traefik, `kibana.<IP>.sslip.io` |
 | loadgen ×60 (`replicaCount: 60`) | кластер `app`, spread по зонам |
 | vmks 0.92.1 | `app` и `elastic`, namespace `vmks` |
@@ -20,7 +20,7 @@
 | Chaos Mesh 2.8.4 | оба кластера |
 | goldpinger 1.1.3 | оба кластера, DaemonSet, namespace `goldpinger` |
 
-Ноды без публичного IP, HDD, preemptible. Исключение: API master обоих кластеров — внешний endpoint (`public_ip = true`), это осознанное решение для доступа с ноутбука. `elastic`: master 2 vCPU / 4 ГБ, data 8 vCPU / 16 ГБ. `app`: 4 vCPU / 8 ГБ. SA `elastic-chaos-monkey`. Kubernetes **1.33**.
+Ноды без публичного IP, HDD, preemptible. Исключение: API master обоих кластеров — внешний endpoint (`public_ip = true`), это осознанное решение для доступа с ноутбука. `elastic`: master 2 vCPU / 4 ГБ, data 4 vCPU / 8 ГБ. `app`: 2 vCPU / 4 ГБ. SA `elastic-chaos-monkey`. Kubernetes **1.33**.
 
 Инфра: [INFRASTRUCTURE.md](INFRASTRUCTURE.md).
 

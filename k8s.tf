@@ -238,8 +238,8 @@ resource "yandex_kubernetes_node_group" "elastic_data_a" {
     }
 
     resources {
-      cores  = 8
-      memory = 16
+      cores  = 4
+      memory = 8
     }
 
     boot_disk {
@@ -283,8 +283,8 @@ resource "yandex_kubernetes_node_group" "elastic_data_b" {
     }
 
     resources {
-      cores  = 8
-      memory = 16
+      cores  = 4
+      memory = 8
     }
 
     boot_disk {
@@ -328,8 +328,8 @@ resource "yandex_kubernetes_node_group" "elastic_data_d" {
     }
 
     resources {
-      cores  = 8
-      memory = 16
+      cores  = 4
+      memory = 8
     }
 
     boot_disk {

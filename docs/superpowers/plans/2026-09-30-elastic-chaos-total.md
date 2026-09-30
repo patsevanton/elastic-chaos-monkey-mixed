@@ -14,8 +14,8 @@
 
 - Kubernetes 1.33 не менять. Вход — Traefik chart 41.6.0.
 - Ноды k8s без публичного IP. Исключение: API master обоих кластеров — внешний endpoint (`public_ip = true`), осознанное решение для доступа с ноутбука. Egress приватных подсетей — NAT Gateway и route table.
-- Загрузочные диски нод — HDD. Ноды preemptible. Исключение: PVC Elasticsearch — `yc-network-ssd`.
-- Elasticsearch dedicated: master 2 vCPU / 4 ГБ, PVC 20 ГиБ, heap 1 ГиБ; data 8 vCPU / 16 ГБ, PVC 50 ГиБ, heap 3 ГиБ. Группы `elastic-master-a|b|d` (size 1) и `elastic-data-a|b|d` (size 2).
+- Загрузочные диски нод — HDD. Ноды preemptible. Все PVC также HDD.
+- Elasticsearch dedicated: master 2 vCPU / 4 ГБ, PVC 20 ГиБ, heap 1 ГиБ; data 4 vCPU / 8 ГБ, PVC 50 ГиБ, heap 2 ГиБ. Группы `elastic-master-a|b|d` (size 1) и `elastic-data-a|b|d` (size 2).
 - `lifecycle.ignore_changes` на `security_group_ids` у всех девяти node group (6 elastic + 3 app).
 - VictoriaMetrics только в namespace `vmks`. В values отключить scrape и recording-правила control-plane Yandex Managed K8s (etcd, scheduler, controller-manager, `kube-scheduler.rules`).
 - Зону изолировать и чинить только скриптами, не `yc compute instance stop` и не `terraform apply`.

@@ -56,7 +56,7 @@ spec:
           spec:
             accessModes:
               - ReadWriteOnce
-            storageClassName: yc-network-ssd
+            storageClassName: yc-network-hdd
             resources:
               requests:
                 storage: 20Gi
@@ -96,7 +96,7 @@ spec:
           spec:
             accessModes:
               - ReadWriteOnce
-            storageClassName: yc-network-ssd
+            storageClassName: yc-network-hdd
             resources:
               requests:
                 storage: 20Gi
@@ -136,7 +136,7 @@ spec:
           spec:
             accessModes:
               - ReadWriteOnce
-            storageClassName: yc-network-ssd
+            storageClassName: yc-network-hdd
             resources:
               requests:
                 storage: 20Gi
@@ -173,21 +173,21 @@ spec:
             - name: elasticsearch
               env:
                 - name: ES_JAVA_OPTS
-                  value: -Xms3g -Xmx3g
+                  value: -Xms2g -Xmx2g
               resources:
                 requests:
-                  cpu: "4"
-                  memory: 6Gi
+                  cpu: "2"
+                  memory: 4Gi
                 limits:
-                  cpu: "6"
-                  memory: 6Gi
+                  cpu: "4"
+                  memory: 4Gi
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
           spec:
             accessModes:
               - ReadWriteOnce
-            storageClassName: yc-network-ssd
+            storageClassName: yc-network-hdd
             resources:
               requests:
                 storage: 50Gi
@@ -224,21 +224,21 @@ spec:
             - name: elasticsearch
               env:
                 - name: ES_JAVA_OPTS
-                  value: -Xms3g -Xmx3g
+                  value: -Xms2g -Xmx2g
               resources:
                 requests:
-                  cpu: "4"
-                  memory: 6Gi
+                  cpu: "2"
+                  memory: 4Gi
                 limits:
-                  cpu: "6"
-                  memory: 6Gi
+                  cpu: "4"
+                  memory: 4Gi
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
           spec:
             accessModes:
               - ReadWriteOnce
-            storageClassName: yc-network-ssd
+            storageClassName: yc-network-hdd
             resources:
               requests:
                 storage: 50Gi
@@ -275,21 +275,21 @@ spec:
             - name: elasticsearch
               env:
                 - name: ES_JAVA_OPTS
-                  value: -Xms3g -Xmx3g
+                  value: -Xms2g -Xmx2g
               resources:
                 requests:
-                  cpu: "4"
-                  memory: 6Gi
+                  cpu: "2"
+                  memory: 4Gi
                 limits:
-                  cpu: "6"
-                  memory: 6Gi
+                  cpu: "4"
+                  memory: 4Gi
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
           spec:
             accessModes:
               - ReadWriteOnce
-            storageClassName: yc-network-ssd
+            storageClassName: yc-network-hdd
             resources:
               requests:
                 storage: 50Gi

@@ -51,19 +51,19 @@
 | Кластер | Роль | Нода |
 |---|---|---|
 | es master | master | 2 vCPU / 4 ГБ, HDD |
-| es data | data | 8 vCPU / 16 ГБ, HDD |
-| app | worker | 4 vCPU / 8 ГБ, HDD |
+| es data | data | 4 vCPU / 8 ГБ, HDD |
+| app | worker | 2 vCPU / 4 ГБ, HDD |
 
 Группы `elastic-master-a|b|d` и `elastic-data-a|b|d`, плюс `app-a|b|d`. `lifecycle.ignore_changes` на `security_group_ids` у каждой из девяти групп.
 
-Исключение из правила HDD: PVC Elasticsearch — `yc-network-ssd`.
+Все диски — HDD, включая PVC Elasticsearch.
 
 ### Elasticsearch (ECK)
 
 - Elasticsearch **9.5.4**, ECK **3.5.0**.
 - Один ресурс ECK, имя `elastic`, шесть nodeSet: `master-a|b|d` (count 1) и `data-a|b|d` (count 2). `nodeSelector` `topology.kubernetes.io/zone` на зону nodeSet.
-- Master (`master-a|b|d`): `node.roles: ["master"]`, PVC **20 ГиБ** `yc-network-ssd`, CPU request/limit 1, RAM 2 ГиБ, heap 1 ГиБ (`-Xms1g -Xmx1g`).
-- Data (`data-a|b|d`): `node.roles: ["data", "ingest"]`, PVC **50 ГиБ** `yc-network-ssd`, CPU request 4 / limit 6, RAM 6 ГиБ, heap 3 ГиБ. `node.attr.zone` — зона nodeSet. Awareness по зоне, force на три зоны.
+- Master (`master-a|b|d`): `node.roles: ["master"]`, PVC **20 ГиБ** `yc-network-hdd`, CPU request/limit 1, RAM 2 ГиБ, heap 1 ГиБ (`-Xms1g -Xmx1g`).
+- Data (`data-a|b|d`): `node.roles: ["data", "ingest"]`, PVC **50 ГиБ** `yc-network-hdd`, CPU request 2 / limit 4, RAM 4 ГиБ, heap 2 ГиБ. `node.attr.zone` — зона nodeSet. Awareness по зоне, force на три зоны.
 - Voting-only и ingest на master нет. Coordinating-only нод нет.
 - Индекс нагрузки: **1 primary + 2 replica**.
 - HTTP: без TLS и без пароля (анонимный superuser). Transport — как в ECK по умолчанию.
@@ -91,7 +91,7 @@ app-под → internal NLB Traefik (es-кластер) → Elasticsearch
 
 `victoria-metrics-k8s-stack` **0.92.1** в namespace **`vmks`** в **обоих** кластерах.
 
-- `app`: полный стек. VMCluster **replicationFactor: 3**, по одному `vmstorage` в `a`/`b`/`d`: **1 vCPU / 2 ГиБ RAM / HDD 30 ГиБ**. Grafana **1 реплика**, Ingress публичного NLB Traefik app.
+- `app`: полный стек. VMCluster **replicationFactor: 3**, по одному `vmstorage` в `a`/`b`/`d`: **500m vCPU / 1 ГиБ RAM / HDD 30 ГиБ**. Grafana **1 реплика**, Ingress публичного NLB Traefik app.
 - `elastic`: тот же chart без Grafana и без VMCluster (`vmks-elastic-values.yaml`). vmagent чарта пишет remote write на `http://10.0.1.35:8480/insert/0/prometheus`. Второй vmagent не ставить.
 - В values обоих кластеров отключить scrape-job и recording-правила control-plane Yandex Managed K8s.
 - Traefik: chart **41.6.0**, **3 реплики** в `a`/`b`/`d`. На каждом кластере два Service: internal NLB и публичный NLB.
@@ -164,7 +164,7 @@ Grafana --> vmselect
 - Pod-kill: ECK поднимает под Elasticsearch; Deployment поднимает под приложения. Ждать green и Ready.
 - Зона: только restore-скрипт (SG + `enable-zones` на NLB es-кластера), не `terraform apply`, не удаление node group, не power-off.
 - Preemptible: посторонний stop Yandex не считать экспериментом. Убита не та зона во время слота — слот перезапустить.
-- PVC ES зональные SSD: при изоляции зоны том остаётся в ней, под не едет в другую зону.
+- PVC ES зональные HDD: при изоляции зоны том остаётся в ней, под не едет в другую зону.
 
 ## Состав репозитория (целевой)
 
