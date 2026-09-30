@@ -67,7 +67,7 @@ Voting-only и ingest на master не добавляем. Coordinating-only н�
 
 `isolate-zone.sh` и `restore-zone.sh` вешают и снимают пустой SG с трёх node group зоны: `elastic-master-*`, `elastic-data-*`, `app-*`. `disable-zones` на NLB Traefik es и NLB `vminsert` без изменений. Пауза 2 минуты между `disable-zones` на одном NLB сохраняется.
 
-Перед первым прогоном — `./scripts/verify-ng-sg-swap.sh` на каждую из шести node group `elastic` и на node group `app`, которые изолируются. При `VERDICT: RECREATE` isolate/restore не использовать.
+Перед первым прогоном — `./scripts/verify-ng-isolation-sg.sh` на каждую из шести node group `elastic` и на node group `app`, которые изолируются. При `VERDICT: RECREATE` isolate/restore не использовать.
 
 ## Документы
 

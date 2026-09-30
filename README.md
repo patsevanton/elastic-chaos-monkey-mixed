@@ -118,8 +118,8 @@ helm --kube-context app upgrade --install loadgen loadgen/chart \
 
 ```bash
 kubectl config use-context elastic
-./scripts/verify-ng-sg-swap.sh "$(terraform output -raw zone_isolation_sg_id)" ru-central1-a elastic-master-a
-./scripts/verify-ng-sg-swap.sh "$(terraform output -raw zone_isolation_sg_id)" ru-central1-a elastic-data-a
+./scripts/verify-ng-isolation-sg.sh "$(terraform output -raw zone_isolation_sg_id)" ru-central1-a elastic-master-a
+./scripts/verify-ng-isolation-sg.sh "$(terraform output -raw zone_isolation_sg_id)" ru-central1-a elastic-data-a
 ```
 
 То же для `elastic-master-b`, `elastic-master-d`, `elastic-data-b`, `elastic-data-d` и, в контексте `app`, для `app-a`, `app-b`, `app-d`. `VERDICT: RECREATE` — isolate/restore не использовать.

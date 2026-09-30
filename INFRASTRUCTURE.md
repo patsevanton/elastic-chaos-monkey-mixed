@@ -30,7 +30,7 @@ Isolate ставит пустой SG на `elastic-master-*`, `elastic-data-*` �
 
 Restore возвращает сохранённые SG и делает `enable-zones` на оба NLB.
 
-Перед первым прогоном `./scripts/verify-ng-sg-swap.sh` для каждой изолируемой node group в её kubectl-контексте. `VERDICT: RECREATE` — isolate/restore не использовать.
+Перед первым прогоном `./scripts/verify-ng-isolation-sg.sh` для каждой изолируемой node group в её kubectl-контексте. `VERDICT: RECREATE` — isolate/restore не использовать.
 
 `disable-zones` не чаще раза в 2 минуты на один NLB.
 

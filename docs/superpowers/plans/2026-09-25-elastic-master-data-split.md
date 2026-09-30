@@ -471,4 +471,4 @@ git commit -m "обновление контракта dedicated master и data"
 
 `terraform apply` и `kubectl apply` манифеста ECK в этот план не входят. Они уничтожат текущие mixed-ноды и PVC. Делать только по отдельной команде пользователя, после Task 1–4.
 
-Перед первым прогоном изоляции на новом стенде — `./scripts/verify-ng-sg-swap.sh` на `elastic-master-*`, `elastic-data-*` и `app-*`. При `VERDICT: RECREATE` скрипты не использовать.
+Перед первым прогоном изоляции на новом стенде — `./scripts/verify-ng-isolation-sg.sh` на `elastic-master-*`, `elastic-data-*` и `app-*`. При `VERDICT: RECREATE` скрипты не использовать.

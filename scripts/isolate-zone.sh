@@ -59,7 +59,7 @@ NLB_TRAEFIK_ID=$NLB_TRAEFIK_ID
 NLB_VMINSERT_ID=$NLB_VMINSERT_ID
 EOF
 
-sg_swap() {
+apply_isolation_sg() {
   local ng="$1" subnets="$2" sg="$3"
   "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: isolate SG $ng start" sg isolate "$ZONE" "$ng" start
   yc managed-kubernetes node-group update "$ng" --network-interface "subnets=${subnets},security-group-ids=[${sg}]"
@@ -67,9 +67,9 @@ sg_swap() {
 }
 
 echo "isolate $ZONE sg=$SG_ID ng=$MASTER_NG,$DATA_NG,$APP_NG"
-sg_swap "$MASTER_NG" "$MASTER_SUBNETS" "$SG_ID"
-sg_swap "$DATA_NG" "$DATA_SUBNETS" "$SG_ID"
-sg_swap "$APP_NG" "$APP_SUBNETS" "$SG_ID"
+apply_isolation_sg "$MASTER_NG" "$MASTER_SUBNETS" "$SG_ID"
+apply_isolation_sg "$DATA_NG" "$DATA_SUBNETS" "$SG_ID"
+apply_isolation_sg "$APP_NG" "$APP_SUBNETS" "$SG_ID"
 yc load-balancer network-load-balancer disable-zones --id "$NLB_TRAEFIK_ID" --zones "$ZONE"
 sleep 120
 yc load-balancer network-load-balancer disable-zones --id "$NLB_VMINSERT_ID" --zones "$ZONE"

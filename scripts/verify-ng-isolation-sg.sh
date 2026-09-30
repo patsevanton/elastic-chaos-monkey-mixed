@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SG_ID="${1:?usage: verify-ng-sg-swap.sh <isolation-sg-id> <zone> <node-group>}"
+SG_ID="${1:?usage: verify-ng-isolation-sg.sh <isolation-sg-id> <zone> <node-group>}"
 ZONE="${2:?zone}"
 NG_NAME="${3:?node-group}"
 
@@ -55,7 +55,7 @@ echo "after:"
 echo "$AFTER"
 
 if [ "$AFTER" = "$BEFORE" ]; then
-  echo "VERDICT: HOT-SWAP — узел не пересоздан, SG сменён на живой VM."
+  echo "VERDICT: HOT-REPLACE — узел не пересоздан, SG сменён на живой VM."
   echo "Используем node-group update в isolate-zone.sh."
 else
   echo "VERDICT: RECREATE — узел пересоздан (name/uid/instance_id/created_at изменились)."

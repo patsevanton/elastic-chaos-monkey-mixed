@@ -75,7 +75,7 @@
 - `monitoring.tf` и `*.tftpl` — два Traefik, Grafana на IP app
 - `manifests/eck/elasticsearch.yaml` — ClusterIP, имя `elastic`
 - `manifests/chaos/*.yaml` — зона параметром, `direction: both`, pod-kill на окно
-- `scripts/verify-ng-sg-swap.sh` — аргументы zone и node group, контекст kubectl
+- `scripts/verify-ng-isolation-sg.sh` — аргументы zone и node group, контекст kubectl
 - `README.md`, `INFRASTRUCTURE.md`, `AGENTS.md`
 - `.opencode/agents/chaos-check.md`, `.opencode/agents/script-runner.md`
 
@@ -367,7 +367,7 @@ Type LoadBalancer, annotations internal, subnet `a`, `loadBalancerIP: 10.0.1.35`
 
 **Files:**
 - Create: `scripts/isolate-zone.sh`, `scripts/restore-zone.sh`
-- Modify: `scripts/verify-ng-sg-swap.sh`
+- Modify: `scripts/verify-ng-isolation-sg.sh`
 - Delete: не удалять `isolate-zone-b.sh` в этой задаче — его заменит вызов нового скрипта, удаление в Task 10
 
 **Interfaces:**
@@ -388,14 +388,14 @@ State: зона, оба NG, оба списка SG, оба NLB id.
 
 Читает state. Возвращает SG обоим node group. `enable-zones` на оба NLB из state. Удаляет state. Не вызывает terraform.
 
-- [ ] **Step 3: verify-ng-sg-swap.sh**
+- [ ] **Step 3: verify-ng-isolation-sg.sh**
 
 Аргументы: `<isolation-sg-id> <zone> <node-group>`. Контекст kubectl — текущий, вызывающий передаёт его сам (`kubectl config use-context`).
 `VERDICT: HOT-SWAP` или `VERDICT: RECREATE` сохранить. Текст больше не ссылается только на `isolate-zone-b.sh`.
 
 - [ ] **Step 4: Проверка синтаксиса**
 
-Run: `bash -n scripts/isolate-zone.sh && bash -n scripts/restore-zone.sh && bash -n scripts/verify-ng-sg-swap.sh`
+Run: `bash -n scripts/isolate-zone.sh && bash -n scripts/restore-zone.sh && bash -n scripts/verify-ng-isolation-sg.sh`
 Expected: пустой вывод, код 0.
 
 На живом кластере не запускать в этой задаче.
@@ -462,7 +462,7 @@ Expected: код 0.
 - [ ] **Step 2: AGENTS.md**
 
 Зону ломать только `./scripts/isolate-zone.sh`, чинить только `./scripts/restore-zone.sh`.
-`verify-ng-sg-swap.sh` вызывать для каждой node group, которую будут изолировать, с контекстом этого кластера. При `VERDICT: RECREATE` isolate/restore не использовать.
+`verify-ng-isolation-sg.sh` вызывать для каждой node group, которую будут изолировать, с контекстом этого кластера. При `VERDICT: RECREATE` isolate/restore не использовать.
 
 - [ ] **Step 3: INFRASTRUCTURE.md**
 
