@@ -152,7 +152,7 @@ Grafana --> vmselect
 
 ## Проверка потери данных
 
-1. Счётчик успешных bulk приложения vs `GET _count`.
+1. Счётчик успешных bulk приложения vs `GET _count` (через Grafana/VictoriaMetrics).
 2. Выборка id и `mget`.
 3. Error-rate bulk и search отдельно, печатаем % без порога.
 
