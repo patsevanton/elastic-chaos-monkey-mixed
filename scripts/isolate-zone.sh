@@ -59,10 +59,17 @@ NLB_TRAEFIK_ID=$NLB_TRAEFIK_ID
 NLB_VMINSERT_ID=$NLB_VMINSERT_ID
 EOF
 
+sg_swap() {
+  local ng="$1" subnets="$2" sg="$3"
+  "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: isolate SG $ng start" sg isolate "$ZONE" "$ng" start
+  yc managed-kubernetes node-group update "$ng" --network-interface "subnets=${subnets},security-group-ids=[${sg}]"
+  "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: isolate SG $ng end" sg isolate "$ZONE" "$ng" end
+}
+
 echo "isolate $ZONE sg=$SG_ID ng=$MASTER_NG,$DATA_NG,$APP_NG"
-yc managed-kubernetes node-group update "$MASTER_NG" --network-interface "subnets=${MASTER_SUBNETS},security-group-ids=[${SG_ID}]"
-yc managed-kubernetes node-group update "$DATA_NG" --network-interface "subnets=${DATA_SUBNETS},security-group-ids=[${SG_ID}]"
-yc managed-kubernetes node-group update "$APP_NG" --network-interface "subnets=${APP_SUBNETS},security-group-ids=[${SG_ID}]"
+sg_swap "$MASTER_NG" "$MASTER_SUBNETS" "$SG_ID"
+sg_swap "$DATA_NG" "$DATA_SUBNETS" "$SG_ID"
+sg_swap "$APP_NG" "$APP_SUBNETS" "$SG_ID"
 yc load-balancer network-load-balancer disable-zones --id "$NLB_TRAEFIK_ID" --zones "$ZONE"
 sleep 120
 yc load-balancer network-load-balancer disable-zones --id "$NLB_VMINSERT_ID" --zones "$ZONE"

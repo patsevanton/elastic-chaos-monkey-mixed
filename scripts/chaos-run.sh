@@ -15,6 +15,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
+annotate() {
+  local zone="$1" step="$2" phase="$3"
+  "$ROOT/scripts/annotate-grafana.sh" "zone $zone: $step $phase" chaos "$step" "$zone" "$phase"
+}
+
 apply_zone() {
   local file="$1" zone="$2" ctx="$3"
   ZONE="$zone" envsubst < "$file" | kubectl --context "$ctx" apply -f -
@@ -59,21 +64,29 @@ report() {
 
 for zone in ru-central1-a ru-central1-b ru-central1-d; do
   echo "zone $zone pod-kill"
+  annotate "$zone" pod-kill start
   pod_kill "$zone"
+  annotate "$zone" pod-kill end
   report
   quiet
   echo "zone $zone loss"
+  annotate "$zone" loss start
   hold "$zone" "$ROOT/manifests/chaos/network-loss.yaml" "$ROOT/manifests/chaos/network-loss-loadgen.yaml"
+  annotate "$zone" loss end
   report
   quiet
   echo "zone $zone delay"
+  annotate "$zone" delay start
   hold "$zone" "$ROOT/manifests/chaos/network-delay.yaml" "$ROOT/manifests/chaos/network-delay-loadgen.yaml"
+  annotate "$zone" delay end
   report
   quiet
   echo "zone $zone isolate"
+  annotate "$zone" isolate start
   "$ROOT/scripts/isolate-zone.sh" "$zone"
   sleep "$STEP"
   report
   "$ROOT/scripts/restore-zone.sh"
+  annotate "$zone" isolate end
   quiet
 done

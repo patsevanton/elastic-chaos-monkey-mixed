@@ -13,6 +13,29 @@
     "from": "now-1h",
     "to": "now"
   },
+  "annotations": {
+    "list": [
+      {
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "rgba(255, 96, 96, 1)",
+        "name": "Chaos",
+        "target": {
+          "limit": 100,
+          "matchAny": true,
+          "tags": [
+            "chaos",
+            "sg"
+          ],
+          "type": "tags"
+        }
+      }
+    ]
+  },
   "templating": {
     "list": [
       {

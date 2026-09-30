@@ -19,11 +19,13 @@ restore_ng() {
   local ng="$1" sg="$2"
   local subnets
   subnets="$(yc managed-kubernetes node-group get "$ng" --format json | jq -r '.node_template.network_interface_specs[0].subnet_ids // [] | join(",")')"
+  "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: restore SG $ng start" sg isolate "$ZONE" "$ng" start
   if [ -n "$sg" ]; then
     yc managed-kubernetes node-group update "$ng" --network-interface "subnets=${subnets},security-group-ids=[${sg}]"
   else
     yc managed-kubernetes node-group update "$ng" --network-interface "subnets=${subnets}"
   fi
+  "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: restore SG $ng end" sg isolate "$ZONE" "$ng" end
 }
 
 restore_ng "$ELASTIC_MASTER_NG" "$ELASTIC_MASTER_SG"

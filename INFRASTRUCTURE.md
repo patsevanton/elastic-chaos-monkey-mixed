@@ -34,6 +34,10 @@ Restore возвращает сохранённые SG и делает `enable-z
 
 `disable-zones` не чаще раза в 2 минуты на один NLB.
 
+## Аннотации Grafana
+
+Изоляция SG и chaos-шаги отмечаются аннотациями в Grafana (`scripts/annotate-grafana.sh`, `POST /api/annotations`, basic-auth `admin` + secret `vmks-grafana`). `isolate-zone.sh`/`restore-zone.sh` ставят пару start/end на каждую изменяемую node group, `chaos-run.sh` — на шаги pod-kill, loss, delay и isolate. Теги: `chaos`/`sg`, зона, шаг, фаза. Дашборды (`cilium-node-latency`, `elastic-app`, `elastic-loadgen-app`, `goldpinger`) показывают их слоем «Chaos» (фильтр по тегам `chaos`, `sg`). Недоступен Grafana API — прогон прерывается.
+
 ## Требования
 
 - yc CLI, Terraform >= 1.3, kubectl, Helm >= 3, `jq`, `curl`, `envsubst`
