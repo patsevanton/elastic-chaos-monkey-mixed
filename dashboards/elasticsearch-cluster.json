@@ -1,6 +1,6 @@
 {
-  "title": "elastic-app",
-  "uid": "elastic-app",
+  "title": "elasticsearch-cluster",
+  "uid": "elasticsearch-cluster",
   "tags": [
     "elasticsearch",
     "app"

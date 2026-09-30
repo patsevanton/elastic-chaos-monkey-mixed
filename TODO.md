@@ -1,4 +1,4 @@
 # TODO
 
 - Настроить скрейпинг `cilium-operator` (:6942) и при желании `hubble-relay`/`hubble-metrics` — пока добавлен только `cilium-agent` (:9090) в `manifests/exporter/cilium-scrape.yaml`. Дашборд "Cilium Node Connectivity Latency" питается от `cilium_node_connectivity_latency_seconds`, которую отдаёт именно `cilium-agent`, поэтому без operator/hubble дашборд уже работает.
-- Разобраться с остатками label `cluster` (значение `elastic`, `unknown_cluster` в TSDB) — семантика `cluster` перегружена: у `elasticsearch_*`-метрик это имя ES-кластера, а не k8s. Введён `cluster_name` для k8s, но легаси `cluster` ещё виден в VictoriaMetrics (`elastic-app.json` дашборд по-прежнему фильтрует по `cluster="elastic"` = ES-кластер). Решить, чистить ли `cluster` и как.
+- Разобраться с остатками label `cluster` (значение `elastic`, `unknown_cluster` в TSDB) — семантика `cluster` перегружена: у `elasticsearch_*`-метрик это имя ES-кластера, а не k8s. Введён `cluster_name` для k8s, но легаси `cluster` ещё виден в VictoriaMetrics (`elasticsearch-cluster.json` дашборд по-прежнему фильтрует по `cluster="elastic"` = ES-кластер). Решить, чистить ли `cluster` и как.
