@@ -1,6 +1,6 @@
 # Развёртывание инфраструктуры: Terraform
 
-Два Yandex Managed Kubernetes 1.33 в одной VPC. `elastic`: шесть node group, master 2 vCPU / 4 ГБ и data 8 vCPU / 16 ГБ, по одной в `ru-central1-a`/`b`/`d`. `app`: три node group 4 vCPU / 8 ГБ, по одной в тех же зонах. Ноды preemptible, HDD, без публичного IP. Egress приватных подсетей — один NAT Gateway. Публичные IP только у внешних NLB Traefik. Между кластерами — internal NLB Traefik.
+Два Yandex Managed Kubernetes 1.33 в одной VPC. `elastic`: шесть node group, master 2 vCPU / 4 ГБ и data 8 vCPU / 16 ГБ, по одной в `ru-central1-a`/`b`/`d`. `app`: три node group 4 vCPU / 8 ГБ, по одной в тех же зонах. Ноды preemptible, HDD, без публичного IP. Исключение: API master обоих кластеров — внешний endpoint (`public_ip = true` в `k8s.tf`/`k8s-app.tf`), осознанное решение для доступа с ноутбука. Egress приватных подсетей — один NAT Gateway. Публичные IP только у внешних NLB Traefik. Между кластерами — internal NLB Traefik.
 
 Service account: `elastic-chaos-monkey`.
 

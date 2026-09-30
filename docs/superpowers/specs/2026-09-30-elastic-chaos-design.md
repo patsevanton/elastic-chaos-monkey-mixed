@@ -46,7 +46,7 @@
 
 Два Yandex Managed K8s **1.33**. Service account: `elastic-chaos-monkey`. Terraform в k8s API не ходит.
 
-`elastic`: шесть node group, по одной preemptible-ноде, загрузочный диск **HDD**, **без публичного IP**. `app`: три node group, те же ограничения. API master обоих кластеров доступен внешне (`public_ip = true` у master). Зоны: `ru-central1-a`, `ru-central1-b`, `ru-central1-d`.
+`elastic`: шесть node group — master по одной preemptible-ноде, data по две (итого 9 нод), загрузочный диск **HDD**, **без публичного IP**. `app`: три node group, по одной preemptible-ноде (итого 3 ноды). API master обоих кластеров — внешний endpoint (`public_ip = true`), осознанное исключение из правила «ноды без публичного IP». Зоны: `ru-central1-a`, `ru-central1-b`, `ru-central1-d`.
 
 | Кластер | Роль | Нода |
 |---|---|---|
@@ -103,6 +103,12 @@ app-под → internal NLB Traefik (es-кластер) → Elasticsearch
 В es-кластере свой Traefik: chart **41.6.0**, 3 реплики. Internal NLB (`10.0.1.33`) — путь loadgen → Elasticsearch. Публичный NLB — Kibana и Chaos Dashboard с ноутбука. Kibana ×3, Ingress без basic auth. Grafana с ноутбука — публичный NLB Traefik `app`, не `10.0.1.34`.
 
 ECK operator и Chaos Mesh controller: по 3 реплики в своём кластере. Chaos Mesh — в обоих кластерах.
+
+### goldpinger и Cilium
+
+Кластеры на Cilium CNI. В обоих кластерах — goldpinger **1.1.3** (image `bloomberg/goldpinger:3.11.3`), DaemonSet в namespace `goldpinger`: поды пингуют друг друга и отдают метрики на `:8080`. Метрики обоих кластеров сходятся в VictoriaMetrics кластера `app` (в `elastic` vmagent remote-write на `vminsert`).
+
+Скрейп: `manifests/goldpinger/goldpinger-scrape.yaml` (VMServiceScrape, namespace `goldpinger`) и `manifests/exporter/cilium-scrape.yaml` (VMServiceScrape `cilium-agent`, порт `metrics` :9090, namespace `kube-system`) — в обоих кластерах. Дашборды: `goldpinger.json`, `cilium-node-latency.json`. Дашборд «Cilium Node Connectivity Latency» питается `cilium_node_connectivity_latency_seconds` от `cilium-agent`. `cilium-operator` (:6942) и `hubble-relay` пока не скрейпятся — см. [TODO.md](../../../TODO.md).
 
 ### Хаос
 
@@ -164,7 +170,7 @@ Grafana --> vmselect
 
 Удалить: `rally-vm.tf`, `cloud-init/rally.yaml`, подсеть `e` в `net.tf` и `locals.tf`, Rally из README, INFRASTRUCTURE, агентов и скриптов.
 
-Добавить: Terraform app-кластера (те же подсети), Go-приложение и Helm chart, internal NLB `vminsert`, Ingress Elasticsearch через Traefik es-кластера, скрипт прогона четырёх шагов по трём зонам на обоих кластерах.
+Добавить: Terraform app-кластера (те же подсети), Go-приложение и Helm chart, internal NLB `vminsert`, Ingress Elasticsearch через Traefik es-кластера, скрипт прогона четырёх шагов по трём зонам на обоих кластерах. goldpinger (DaemonSet, оба кластера) и cilium-scrape для наблюдаемости сети.
 
 Chaos Mesh CR: pod-kill, loss 30%, delay 500 мс — для приложения и для Elasticsearch, селектор по зоне шага.
 

@@ -20,7 +20,7 @@
 | Chaos Mesh 2.8.4 | оба кластера |
 | goldpinger 1.1.3 | оба кластера, DaemonSet, namespace `goldpinger` |
 
-Ноды без публичного IP, HDD, preemptible. `elastic`: master 2 vCPU / 4 ГБ, data 8 vCPU / 16 ГБ. `app`: 4 vCPU / 8 ГБ. SA `elastic-chaos-monkey`. Kubernetes **1.33**.
+Ноды без публичного IP, HDD, preemptible. Исключение: API master обоих кластеров — внешний endpoint (`public_ip = true`), это осознанное решение для доступа с ноутбука. `elastic`: master 2 vCPU / 4 ГБ, data 8 vCPU / 16 ГБ. `app`: 4 vCPU / 8 ГБ. SA `elastic-chaos-monkey`. Kubernetes **1.33**.
 
 Инфра: [INFRASTRUCTURE.md](INFRASTRUCTURE.md).
 
