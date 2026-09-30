@@ -268,6 +268,7 @@
         }
       ],
       "title": "Per-zone Cilium average ICMP Latency ",
+      "description": "Средняя ICMP-задержка между зонами (rc1a/rc1b/rc1d) по данным Cilium node connectivity. В легенде направление вида [a -> b]. Рост задержки или появление данных там, где раньше был ноль, показывает влияние сетевой изоляции зоны.",
       "type": "timeseries"
     },
     {
@@ -498,6 +499,7 @@
         }
       ],
       "title": "Top 10 per-nodes Cilium ICMP Latency ",
+      "description": "Топ-10 узлов по ICMP-задержке между зонами. Помогает найти конкретные ноды-источники или приёмники, где задержка и потери проявляются сильнее всего.",
       "type": "timeseries"
     },
     {
@@ -592,6 +594,7 @@
         }
       ],
       "title": "Cilium ICMP Latency",
+      "description": "Матрица ICMP-задержек между нодами источника и приёмника (source × target) в секундах. Пустые ячейки (empty) означают отсутствие связи — типичная картина для изолированной зоны.",
       "transformations": [
         {
           "id": "groupingToMatrix",
@@ -697,6 +700,7 @@
         }
       ],
       "title": "Cilium HTTP Latency",
+      "description": "Матрица HTTP-задержек между нодами (source × target) по проверкам Cilium. В отличие от ICMP учитывает полный путь установки TCP/HTTP, поэтому пустые ячейки указывают на недоступность сервиса, а не только хоста.",
       "transformations": [
         {
           "id": "groupingToMatrix",

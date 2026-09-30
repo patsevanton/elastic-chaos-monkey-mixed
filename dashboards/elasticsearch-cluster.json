@@ -49,6 +49,7 @@
       "panels": [
         {
           "title": "bulk: ошибки и успех (docs/s)",
+          "description": "Скорость обработки bulk-запросов внутри кластера в документах в секунду: кривые err и ok по метрикам loadgen. Рост err означает, что часть документов не записалась.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -99,6 +100,7 @@
         },
         {
           "title": "bulk: доля ошибок (%)",
+          "description": "Процент ошибочных bulk-запросов от общего их числа. В норме 0%; рост указывает на проблемы записи (отказы шардов, таймауты, rejections).",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -143,6 +145,7 @@
         },
         {
           "title": "search: ошибки и успех (req/s)",
+          "description": "Скорость поисковых запросов внутри кластера: успешные и ошибочные _search в секунду. Падение ok с ростом err — деградация чтения.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -193,6 +196,7 @@
         },
         {
           "title": "search: доля ошибок (%)",
+          "description": "Процент ошибочных поисковых запросов от общего числа. В норме 0%; рост говорит о недоступности шардов/нод или таймаутах.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -250,6 +254,7 @@
       "panels": [
         {
           "title": "search: query + fetch время (s/s, по всем докам)",
+          "description": "Суммарное время фазы query и фазы fetch поисковых запросов (секунды в секунду по всем документам). Рост показывает, сколько времени ES тратит на поиск и выборку.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -300,6 +305,7 @@
         },
         {
           "title": "search: query + fetch время (ms/операцию)",
+          "description": "Среднее время фазы query и fetch в расчёте на одну операцию поиска. Удобно для сравнения задержки поиска до и после сбоя.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -350,6 +356,7 @@
         },
         {
           "title": "indexing время (ms/операцию)",
+          "description": "Среднее время индексации одного документа внутри Elasticsearch. Рост указывает на замедление записи на уровне кластера (нагрузка, merge, деградация диска).",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -408,6 +415,7 @@
       "panels": [
         {
           "title": "search: query/fetch rate (req/s)",
+          "description": "Скорость выполнения фаз query и fetch поиска в секунду. Позволяет увидеть, растёт ли нагрузка на поиск и как меняется баланс query/fetch.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -458,6 +466,7 @@
         },
         {
           "title": "indexing: index rate (docs/s)",
+          "description": "Скорость индексации документов кластером (документов в секунду). Резкое падение при неизменной нагрузке loadgen означает проблемы записи.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -502,6 +511,7 @@
         },
         {
           "title": "unassigned / initializing / relocating shards",
+          "description": "Число шардов в состояниях unassigned (не размещены), initializing (инициализируются) и relocating (переезжают). Unassigned > 0 при достаточных нодах — признак потери связи с нодой или нехватки места.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -570,6 +580,7 @@
       "panels": [
         {
           "title": "thread pool: rejections (ops/s)",
+          "description": "Скорость отказов пулов потоков Elasticsearch (indexing/search/write и т.д.) в операциях в секунду. Любые ненулевые значения означают переполнение очередей и отбрасывание запросов.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -614,6 +625,7 @@
         },
         {
           "title": "thread pool: в очереди (по пулам indexing/search)",
+          "description": "Текущая длина очередей пулов потоков поиска и записи. Рост очереди предшествует отказам (rejections) и росту задержек.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -658,6 +670,7 @@
         },
         {
           "title": "pending tasks (master queue)",
+          "description": "Число задач, ожидающих обработки мастер-нодой. Рост означает, что кластер не успевает применять изменения состояния (аллокация шардов, обновления метаданных).",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -715,6 +728,7 @@
       "panels": [
         {
           "title": "cluster health",
+          "description": "Статус здоровья кластера: 1 — green (все шарды назначены), отсутствие данных/0 — yellow или red. Потеря green — ключевой сигнал сбоя.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -760,6 +774,7 @@
         },
         {
           "title": "unassigned shards",
+          "description": "Общее число неназначенных шардов. Unassigned реплик даёт yellow, unassigned первичных — red и недоступность данных. Рост при сбое ноды — ожидаемый эффект изоляции.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -805,6 +820,7 @@
         },
         {
           "title": "initializing shards",
+          "description": "Число шардов, которые сейчас инициализируются (восстанавливаются после сбоя или перераспределения). Всплеск после отказа ноды — признак активного восстановления.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -850,6 +866,7 @@
         },
         {
           "title": "documents (всего первичных)",
+          "description": "Суммарное число первичных документов в индексах данных (elastic-es-data-*). Позволяет оценить сохранность данных: график не должен падать после сбоя.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
@@ -895,6 +912,7 @@
         },
         {
           "title": "documents (всего с репликами)",
+          "description": "Суммарное число документов с учётом реплик. Отрыв от первичных показывает число копий; равенство первичным при 2 репликах — сигнал потери реплик.",
           "type": "timeseries",
           "datasource": {
             "type": "prometheus",
