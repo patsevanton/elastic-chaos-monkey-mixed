@@ -9,6 +9,20 @@
 - `disable-zones` не чаще раза в 2 минуты на NLB — при retry выдержать паузу.
 - loadgen `ensureIndex` создаёт индекс `load` (1 primary / 2 replica, константы `indexShards`/`indexReplicas` в `loadgen/main.go`) бесконечным retry до готовности ES; при `resource_already_exists_exception` логирует в stderr и доводит реплики через `_settings`. После старта подов обязательно проверить логи (`kubectl --context app -n load logs -l app=loadgen`): при регулярных `ensureIndex: … retry` разобраться, почему ES/индекс недоступен, и не игнорировать.
 - Ноды k8s без публичного IP. Исключение: API master обоих кластеров — внешний endpoint (`public_ip = true` в `k8s.tf`/`k8s-app.tf`), это осознанное решение для доступа с ноутбука, не нарушение правила.
+- Стандартные Prometheus CRD (`monitoring.coreos.com/v1`) ставятся чартом `prometheus-community/prometheus-operator-crds` (32.0.1) в оба контекста **до** чартов, которые рендерят `ServiceMonitor` (Traefik, goldpinger, prometheus-elasticsearch-exporter). Сам prometheus-operator не ставится: `ServiceMonitor` собирает конвертер VM-оператора (в `victoria-metrics-k8s-stack` `victoria-metrics-operator.operator.disable_prometheus_converter: false`), преобразуя их в `VMServiceScrape`.
+
+# Установка Prometheus CRD
+
+```bash
+helm --kube-context app upgrade --install prometheus-operator-crds \
+    prometheus-community/prometheus-operator-crds \
+    --namespace monitoring --create-namespace \
+    --wait --version 32.0.1 --timeout 5m
+helm --kube-context elastic upgrade --install prometheus-operator-crds \
+    prometheus-community/prometheus-operator-crds \
+    --namespace monitoring --create-namespace \
+    --wait --version 32.0.1 --timeout 5m
+```
 
 # Установка VictoriaMetrics
 
@@ -36,12 +50,23 @@ helm --kube-context elastic upgrade --install vmks \
     -f vmks-elastic-values.yaml
 ```
 
-После `helm` в контексте `app` — scrape Traefik и internal NLB на `vminsert`:
+Traefik и goldpinger отдают `ServiceMonitor` через свои values (`metrics.prometheus.serviceMonitor.enabled`, `serviceMonitor.enabled`) — отдельные манифесты скрейпа не нужны. После `helm` в контексте `app` — internal NLB на `vminsert`:
 
 ```bash
-kubectl --context app apply -f manifests/exporter/traefik-scrape.yaml
 NLB_SUBNET_ID="$(terraform output -raw nlb_subnet_id)" envsubst < manifests/vminsert/nlb.yaml \
   | kubectl --context app apply -f -
+```
+
+# Установка prometheus-elasticsearch-exporter
+
+В контексте `elastic` (ES живёт там), helm-чарт `prometheus-community/prometheus-elasticsearch-exporter` **7.4.0** с `-f elasticsearch-exporter-values.yaml`: 3 реплики с spread по зонам, `es.uri` на `elastic-es-http.elastic.svc:9200`, `serviceMonitor.enabled: true`. Deployment в манифестах больше нет.
+
+```bash
+helm --kube-context elastic upgrade --install elasticsearch-exporter \
+    prometheus-community/prometheus-elasticsearch-exporter \
+    --namespace elastic \
+    --wait --version 7.4.0 --timeout 5m \
+    -f elasticsearch-exporter-values.yaml
 ```
 
 Полный порядок установки стенда с нуля — в [docs/superpowers/plans/2026-09-30-elastic-chaos-total.md](docs/superpowers/plans/2026-09-30-elastic-chaos-total.md).

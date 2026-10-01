@@ -10,7 +10,9 @@ service:
   port: 8080
 
 serviceMonitor:
-  enabled: false
+  enabled: true
+  interval: 20s
+  selector: {}
 
 podAnnotations:
   prometheus.io/scrape: "true"

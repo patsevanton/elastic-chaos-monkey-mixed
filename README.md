@@ -43,7 +43,7 @@
 | app worker ×3 | 2 vCPU / 8 ГБ | loadgen request 10m / 32Mi, limit 200m / 128Mi | boot 64 ГиБ, HDD |
 | loadgen | 60 реплик, spread по зонам | — | — |
 
-Версии: Elasticsearch **9.5.4**, ECK **3.5.0**, Traefik **41.6.0**, victoria-metrics-k8s-stack **0.92.1**, Chaos Mesh **2.8.4**, goldpinger **1.1.3** (образ `bloomberg/goldpinger:3.11.3`), CloudNativePG **0.25.0** (PostgreSQL **17.5-22**).
+Версии: Elasticsearch **9.5.4**, ECK **3.5.0**, Traefik **41.6.0**, victoria-metrics-k8s-stack **0.92.1**, prometheus-operator-crds **32.0.1**, prometheus-elasticsearch-exporter **7.4.0**, Chaos Mesh **2.8.4**, goldpinger **1.1.3** (образ `bloomberg/goldpinger:3.11.3`), CloudNativePG **0.25.0** (PostgreSQL **17.5-22**).
 
 Elasticsearch разнесён по ролям: узлы `master` держат только кворум, узлы `data` хранят шарды. Это важно для эксперимента: изоляция одной зоны гасит сразу и master, и data этой зоны — но два master из трёх остаются живы, то есть кворум сохраняется. Репликация шардов настроена «сознанием зоны» (zone awareness) с принудительным распределением по трём зонам: индекс `load` имеет **1 primary и 2 replica**, по копии в каждой зоне.
 

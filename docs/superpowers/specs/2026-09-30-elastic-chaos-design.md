@@ -2,7 +2,7 @@
 
 Дата: 2026-09-30 (объединено из спек 2026-09-24 «два кластера» и 2026-09-25 «master/data split»)
 Репозиторий: `elastic-chaos-monkey-mixed`
-Заменяет концепцию одного кластера и одного прогона зоны `b`. Доступ с ноутбука — публичные IP внешних NLB Traefik и внешние endpoint API master.
+Доступ с ноутбука — публичные IP внешних NLB Traefik и внешние endpoint API master.
 
 Формат: README = статья. Подход реализации: пошаговый стенд, хаос скриптом, не CI.
 
@@ -23,15 +23,10 @@
 
 ## Вне скоупа
 
-- Rally, esrally, Rally VM, cloud-init Rally, подсеть `ru-central1-e` (`10.0.4.0/24`).
-- Целевые 20 531 936 документов и 131,53 ГБ store. Размер документа фиксирован, объём индекса — сколько успеет залиться за прогон.
-- Geo-запросы и корпус geoshape.
 - Power-off VM (`yc compute instance stop`).
-- Chaos Mesh на фоне уже изолированной зоны: контроллер до подов зоны не достучится.
 - IOChaos, StressChaos, Chaos Mesh Workflow как оркестратор.
 - Сравнение mixed vs dedicated как отдельный эксперимент (эта спека уже выбрала dedicated). ECK vs Helm, второй ES-кластер.
 - Публичный Elasticsearch, TLS на HTTP ES.
-- Автотесты хаоса в CI.
 - Смена версии Kubernetes (остаётся 1.33), Elasticsearch, ECK, Traefik.
 - Изменение кластера `app` (размеры нод, число node group, приложение).
 - Состав полей документа — спросить в следующий раз. Размер документа уже задан: 2 КБ.
@@ -98,7 +93,9 @@ app-под → internal NLB Traefik (es-кластер) → Elasticsearch
 
 Метрики приложения — Prometheus, scrape vmagent app-кластера.
 
-Метрики Elasticsearch: `prometheus-community/elasticsearch_exporter` в es-кластере, **3 реплики** в `a`/`b`/`d`. vmagent es-кластера пишет в `vminsert` app-кластера, не в vmagent app. `vminsert` — internal NLB `10.0.1.35:8480`. Grafana читает `vmselect`.
+Метрики Elasticsearch: helm-чарт `prometheus-community/prometheus-elasticsearch-exporter` **7.4.0** в es-кластере, **3 реплики** в `a`/`b`/`d`, `serviceMonitor.enabled: true`. vmagent es-кластера пишет в `vminsert` app-кластера, не в vmagent app. `vminsert` — internal NLB `10.0.1.35:8480`. Grafana читает `vmselect`.
+
+Скрейп-конфигурация задаётся стандартными `ServiceMonitor` (`monitoring.coreos.com/v1`) — для экспортёра, Traefik и goldpinger. CRD ставит чарт `prometheus-community/prometheus-operator-crds` **32.0.1** в оба кластера; `ServiceMonitor` собирает конвертер VM-оператора (сам prometheus-operator не ставится). `manifests/exporter/chaos-mesh-scrape.yaml`, `cilium-scrape.yaml` и loadgen в своём чарте остаются `VMServiceScrape`.
 
 В es-кластере свой Traefik: chart **41.6.0**, 3 реплики. Internal NLB (`10.0.1.33`) — путь loadgen → Elasticsearch. Публичный NLB — Kibana и Chaos Dashboard с ноутбука. Kibana ×3, Ingress без basic auth. Grafana с ноутбука — публичный NLB Traefik `app`, не `10.0.1.34`.
 
@@ -108,7 +105,7 @@ ECK operator и Chaos Mesh controller: по 3 реплики в своём кл�
 
 Кластеры на Cilium CNI. В обоих кластерах — goldpinger **1.1.3** (image `bloomberg/goldpinger:3.11.3`), DaemonSet в namespace `goldpinger`: поды пингуют друг друга и отдают метрики на `:8080`. Метрики обоих кластеров сходятся в VictoriaMetrics кластера `app` (в `elastic` vmagent remote-write на `vminsert`).
 
-Скрейп: `manifests/goldpinger/goldpinger-scrape.yaml` (VMServiceScrape, namespace `goldpinger`) и `manifests/exporter/cilium-scrape.yaml` (VMServiceScrape `cilium-agent`, порт `metrics` :9090, namespace `kube-system`) — в обоих кластерах. Дашборды: `goldpinger.json`, `cilium-node-latency.json`. Дашборд «Cilium Node Connectivity Latency» питается `cilium_node_connectivity_latency_seconds` от `cilium-agent`. `cilium-operator` (:6942) и `hubble-relay` пока не скрейпятся — см. [TODO.md](../../../TODO.md).
+Скрейп: `ServiceMonitor` goldpinger (`serviceMonitor.enabled` в values чарта, namespace `goldpinger`) и `manifests/exporter/cilium-scrape.yaml` (VMServiceScrape `cilium-agent`, порт `metrics` :9090, namespace `kube-system`) — в обоих кластерах. Дашборды: `goldpinger.json`, `cilium-node-latency.json`. Дашборд «Cilium Node Connectivity Latency» питается `cilium_node_connectivity_latency_seconds` от `cilium-agent`. `cilium-operator` (:6942) и `hubble-relay` пока не скрейпятся — см. [TODO.md](../../../TODO.md).
 
 ### Хаос
 

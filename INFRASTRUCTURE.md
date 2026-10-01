@@ -22,6 +22,8 @@ Chart **41.6.0**, 3 реплики. На каждом кластере два Se
 
 Оба кластера, namespace `vmks`, chart **0.92.1**. `app`: Grafana 1 реплика, снаружи через публичный NLB Traefik, VMCluster RF=3, vmstorage HDD 30 ГиБ. `elastic`: тот же chart без Grafana — CRD оператора для `VMAgent`. Control-plane scrape и recording-правила выключены в обоих. `vminsert` публикуется Service `vminsert-nlb` на `10.0.1.35:8480`. vmagent кластера `elastic` пишет туда remote write, не в vmagent `app`.
 
+Стандартные Prometheus CRD (`monitoring.coreos.com/v1`) ставит чарт `prometheus-community/prometheus-operator-crds` **32.0.1** в оба кластера (namespace `monitoring`) — до чартов, которые рендерят `ServiceMonitor` (Traefik, goldpinger, prometheus-elasticsearch-exporter). Сам prometheus-operator не ставится: `ServiceMonitor` собирает конвертер VM-оператора. Метрики Elasticsearch отдаёт helm-чарт `prometheus-community/prometheus-elasticsearch-exporter` **7.4.0** в кластере `elastic` (3 реплики, `serviceMonitor.enabled: true`).
+
 ## Изоляция зоны
 
 Пустой SG `zone-isolation`. `lifecycle.ignore_changes` на `security_group_ids` у всех девяти node group. Переключение только `./scripts/isolate-zone.sh` / `./scripts/restore-zone.sh`. State: `.state/zone-isolate.env`.

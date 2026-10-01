@@ -54,7 +54,9 @@ Terraform: `net.tf` (три подсети `a`/`b`/`d`, NAT), `locals.tf`, `ip-d
 
 Go и chart: `loadgen/` — `go.mod`, `main.go`, `main_test.go`, `Dockerfile`, `chart/` (Deployment + Service + VMServiceScrape, `replicaCount: 60`, env `ES_URL=http://elastic.10.0.1.33.sslip.io`).
 
-Манифесты: `manifests/eck/` (priorityclass, elasticsearch, kibana), `manifests/ingress/` (kibana через public IP, elasticsearch через internal `10.0.1.33`), `manifests/exporter/` (elasticsearch-exporter, traefik-scrape, chaos-mesh-scrape, cilium-scrape), `manifests/goldpinger/`, `manifests/vminsert/nlb.yaml`, `manifests/chaos/` (pod-kill, network-loss, network-delay — ES в ns `elastic` и loadgen в ns `load`), `manifests/chaos-mesh/rbac.yaml`.
+Манифесты: `manifests/eck/` (priorityclass, elasticsearch, kibana), `manifests/ingress/` (kibana через public IP, elasticsearch через internal `10.0.1.33`), `manifests/exporter/` (chaos-mesh-scrape, cilium-scrape — `VMServiceScrape`), `manifests/vminsert/nlb.yaml`, `manifests/chaos/` (pod-kill, network-loss, network-delay — ES в ns `elastic` и loadgen в ns `load`), `manifests/chaos-mesh/rbac.yaml`.
+
+Манифесты скрейпа, которые умеют чарты, задаются через values: Traefik (`metrics.prometheus.serviceMonitor.enabled`), goldpinger (`serviceMonitor.enabled`), prometheus-elasticsearch-exporter (`serviceMonitor.enabled`). loadgen остаётся `VMServiceScrape` в шаблоне чарта. Стандартные Prometheus CRD ставит чарт `prometheus-community/prometheus-operator-crds` 32.0.1; `ServiceMonitor` конвертирует VM-оператор.
 
 Скрипты: `scripts/apply-eck.sh`, `scripts/apply-cnpg.sh`, `scripts/isolate-zone.sh`, `scripts/restore-zone.sh`, `scripts/chaos-run.sh`, `scripts/verify-ng-isolation-sg.sh`, `scripts/annotate-grafana.sh`, `scripts/check-chaos.sh`.
 
@@ -66,13 +68,15 @@ Go и chart: `loadgen/` — `go.mod`, `main.go`, `main_test.go`, `Dockerfile`, `
 
 1. **Terraform.** `export TF_VAR_folder_id=<folder id>`; `terraform init && terraform apply`. Если стенд уже стоит — `No changes`.
 2. **kubeconfig.** `eval "$(terraform output -raw elastic_credentials_command)"` и `eval "$(terraform output -raw app_credentials_command)"`. После destroy/apply контексты всегда перезаписывать — старые endpoint'ы мертвы.
-3. **Helm-репозитории.** `helm repo add elastic https://helm.elastic.co`, `chaos-mesh https://charts.chaos-mesh.org`, `goldpinger https://bloomberg.github.io/goldpinger`, затем `helm repo update`. Traefik и vmks тянутся по OCI, `helm repo add` им не нужен.
-4. **Traefik 41.6.0** в оба контекста: `-f traefik-elastic-values.yaml` в `elastic`, `-f traefik-app-values.yaml` в `app`.
-5. **vmks 0.92.1** — см. [AGENTS.md](../../../AGENTS.md) «Установка VictoriaMetrics»: в `app` сначала namespace, `manifests/chaos-mesh/rbac.yaml` и ожидание secret `chaos-mesh-admin-token`, затем `./scripts/apply-cnpg.sh` (ставит оператор CNPG и кластер `pg-grafana` в `vmks`, создаёт secret `pg-grafana-app` — нужен Grafana при старте), затем `helm -f vmks-values.yaml`; в `elastic` — `helm -f vmks-elastic-values.yaml`. После — `manifests/exporter/traefik-scrape.yaml` и internal NLB `vminsert` (`NLB_SUBNET_ID="$(terraform output -raw nlb_subnet_id)" envsubst < manifests/vminsert/nlb.yaml | kubectl --context app apply -f -`).
-6. **ECK 3.5.0** в `elastic`: `helm --kube-context elastic upgrade --install elastic-operator elastic/eck-operator --namespace elastic-system --create-namespace --version 3.5.0 --set replicaCount=3`, затем `./scripts/apply-eck.sh` и `kubectl --context elastic apply -f manifests/exporter/elasticsearch-exporter.yaml`.
-7. **Chaos Mesh 2.8.4** в оба контекста (`-f chaos-mesh-elastic-values.yaml`, `-f chaos-mesh-app-values.yaml`), затем `kubectl --context app apply -f manifests/exporter/chaos-mesh-scrape.yaml`.
-8. **goldpinger 1.1.3** в оба контекста (`-f goldpinger-values.yaml`), затем в обоих: `manifests/goldpinger/goldpinger-scrape.yaml` и `manifests/exporter/cilium-scrape.yaml`.
-9. **loadgen** в `app`: `helm --kube-context app upgrade --install loadgen loadgen/chart --namespace load --create-namespace`. Образ — `ghcr.io/patsevanton/elastic-chaos-monkey-mixed`, тег в `loadgen/chart/values.yaml`, собирается workflow `.github/workflows/docker.yml`.
+3. **Prometheus CRD.** `prometheus-community/prometheus-operator-crds` **32.0.1** в оба контекста в namespace `monitoring` — см. [AGENTS.md](../../../AGENTS.md) «Установка Prometheus CRD». Нужны раньше чартов, которые рендерят `ServiceMonitor`.
+4. **Helm-репозитории.** `helm repo add elastic https://helm.elastic.co`, `chaos-mesh https://charts.chaos-mesh.org`, `goldpinger https://bloomberg.github.io/goldpinger`, `prometheus-community https://prometheus-community.github.io/helm-charts`, затем `helm repo update`. Traefik и vmks тянутся по OCI, `helm repo add` им не нужен.
+5. **Traefik 41.6.0** в оба контекста: `-f traefik-elastic-values.yaml` в `elastic`, `-f traefik-app-values.yaml` в `app`. `ServiceMonitor` включён в values.
+6. **vmks 0.92.1** — см. [AGENTS.md](../../../AGENTS.md) «Установка VictoriaMetrics»: в `app` сначала namespace, `manifests/chaos-mesh/rbac.yaml` и ожидание secret `chaos-mesh-admin-token`, затем `./scripts/apply-cnpg.sh` (ставит оператор CNPG и кластер `pg-grafana` в `vmks`, создаёт secret `pg-grafana-app` — нужен Grafana при старте), затем `helm -f vmks-values.yaml`; в `elastic` — `helm -f vmks-elastic-values.yaml`. После — internal NLB `vminsert` (`NLB_SUBNET_ID="$(terraform output -raw nlb_subnet_id)" envsubst < manifests/vminsert/nlb.yaml | kubectl --context app apply -f -`).
+7. **ECK 3.5.0** в `elastic`: `helm --kube-context elastic upgrade --install elastic-operator elastic/eck-operator --namespace elastic-system --create-namespace --version 3.5.0 --set replicaCount=3`, затем `./scripts/apply-eck.sh`.
+8. **prometheus-elasticsearch-exporter 7.4.0** в `elastic` (ES там): `helm --kube-context elastic upgrade --install elasticsearch-exporter prometheus-community/prometheus-elasticsearch-exporter --namespace elastic --version 7.4.0 -f elasticsearch-exporter-values.yaml`. Раньше был Deployment в `manifests/exporter/elasticsearch-exporter.yaml`.
+9. **Chaos Mesh 2.8.4** в оба контекста (`-f chaos-mesh-elastic-values.yaml`, `-f chaos-mesh-app-values.yaml`), затем `kubectl --context app apply -f manifests/exporter/chaos-mesh-scrape.yaml`.
+10. **goldpinger 1.1.3** в оба контекста (`-f goldpinger-values.yaml`), затем в обоих: `manifests/exporter/cilium-scrape.yaml`.
+11. **loadgen** в `app`: `helm --kube-context app upgrade --install loadgen loadgen/chart --namespace load --create-namespace`. Образ — `ghcr.io/patsevanton/elastic-chaos-monkey-mixed`, тег в `loadgen/chart/values.yaml`, собирается workflow `.github/workflows/docker.yml`.
 
 ### Проверка после установки
 
