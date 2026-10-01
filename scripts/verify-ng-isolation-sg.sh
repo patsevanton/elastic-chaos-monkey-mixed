@@ -3,6 +3,13 @@ set -euo pipefail
 SG_ID="${1:?usage: verify-ng-isolation-sg.sh <isolation-sg-id> <zone> <node-group>}"
 ZONE="${2:?zone}"
 NG_NAME="${3:?node-group}"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+annotate() {
+  local phase="$1"
+  "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: verify NG isolation SG $NG_NAME $phase" sg verify "$ZONE" "$NG_NAME" "$phase"
+}
 
 snapshot() {
   kubectl get nodes -l topology.kubernetes.io/zone=$ZONE -o json | jq -r '
@@ -39,6 +46,7 @@ BEFORE="$(snapshot)"
 echo "before:"
 echo "$BEFORE"
 
+annotate start
 echo "apply sg ${SG_ID} on ${NG_NAME}"
 set_ng_sg "$SG_ID"
 
@@ -53,6 +61,7 @@ done
 
 echo "after:"
 echo "$AFTER"
+annotate end
 
 if [ "$AFTER" = "$BEFORE" ]; then
   echo "VERDICT: HOT-REPLACE — узел не пересоздан, SG сменён на живой VM."
