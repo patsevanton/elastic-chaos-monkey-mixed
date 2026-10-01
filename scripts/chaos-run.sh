@@ -55,7 +55,7 @@ hold() {
   sleep "$STEP"
 }
 
-for zone in ru-central1-a ru-central1-b ru-central1-d; do
+for zone in ru-central1-a; do
   echo "zone $zone pod-kill"
   annotate "$zone" pod-kill start
   pod_kill "$zone"

@@ -14,6 +14,10 @@ if [ -z "$ZONE" ] || [ -z "$ELASTIC_MASTER_NG" ] || [ -z "$ELASTIC_DATA_NG" ] ||
   echo "state неполный" >&2
   exit 1
 fi
+if [ "$ZONE" != "ru-central1-a" ]; then
+  echo "восстанавливаем только ru-central1-a, а не $ZONE" >&2
+  exit 1
+fi
 
 restore_ng() {
   local ng="$1" sg="$2"

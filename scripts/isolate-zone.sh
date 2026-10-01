@@ -2,12 +2,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-ZONE="${1:?usage: isolate-zone.sh ru-central1-a|b|d}"
+ZONE="${1:?usage: isolate-zone.sh ru-central1-a}"
 case "$ZONE" in
   ru-central1-a) SUFFIX=a ;;
-  ru-central1-b) SUFFIX=b ;;
-  ru-central1-d) SUFFIX=d ;;
-  *) echo "зона $ZONE не из a/b/d" >&2; exit 1 ;;
+  *) echo "изолируем только ru-central1-a, а не $ZONE" >&2; exit 1 ;;
 esac
 STATE_FILE="$ROOT/.state/zone-isolate.env"
 mkdir -p "$ROOT/.state"

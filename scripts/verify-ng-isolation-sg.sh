@@ -3,6 +3,10 @@ set -euo pipefail
 SG_ID="${1:?usage: verify-ng-isolation-sg.sh <isolation-sg-id> <zone> <node-group>}"
 ZONE="${2:?zone}"
 NG_NAME="${3:?node-group}"
+case "$ZONE" in
+  ru-central1-a) ;;
+  *) echo "проверяем только ru-central1-a, а не $ZONE" >&2; exit 1 ;;
+esac
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 

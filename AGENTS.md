@@ -1,5 +1,7 @@
 # Правила
 
+- Зона только `ru-central1-a`. Изоляция (`isolate-zone.sh`/`restore-zone.sh`, `verify-ng-isolation-sg.sh`) и chaos-тесты (`chaos-run.sh`) выполняются исключительно для неё; скрипты отказываются работать с `b`/`d`. Манифесты chaos — с `ZONE=ru-central1-a`.
+- После прогона хаоса — отчёт о влиянии всех аннотаций в `docs/chaos-report-<дата>.md`. Сбор данных: `RUN_FROM=<epoch начала прогона> ZONES=ru-central1-a ./scripts/collect-chaos-report.sh` (пишет `windows.tsv` и `analysis.tsv` в `.state/chaos-report-<дата>/`); AI смотрит `analysis.tsv` и метрики на графиках, ищет всплески/существенные изменения и записывает время, аннотацию и эффект в файл. Порог значимости не задан — по форме кривой.
 - Зону ломать только `./scripts/isolate-zone.sh`, чинить только `./scripts/restore-zone.sh`. Power-off VM (`yc compute instance stop`) — не наш сценарий.
 - `terraform apply` для переключения изоляции не применять: SG переключается CLI, иначе apply «чинит» эксперимент. Контракт — в [INFRASTRUCTURE.md](INFRASTRUCTURE.md).
 - Стенд может быть собран, а может быть не собран. `terraform apply` идемпотентен: если стенд уже стоит — `No changes`, если нет — создаёт. Запускать нужно всегда.
