@@ -4,3 +4,10 @@ image:
   pullPolicy: IfNotPresent
 esURL: http://elastic.10.0.1.33.sslip.io
 replicaCount: 60
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi

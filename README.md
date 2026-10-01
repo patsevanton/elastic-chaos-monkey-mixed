@@ -1,136 +1,118 @@
-# Отказоустойчивость Elasticsearch: два кластера
+# Elasticsearch под хаосом: выживает ли кластер, когда падает зона
 
-Кластер `elastic` держит Elasticsearch. Кластер `app` пишет и читает его через Traefik. Стенд ломает по очереди зоны `ru-central1-a`, `b`, `d`: pod-kill, network loss 30%, network delay 500 мс, затем сетевая изоляция зоны. Оба кластера в одном шаге, одновременно. VM не выключается.
+## Введение
 
-Критерии: search жив, index жив, нет потери документов, которые bulk принял. Порога нет: печатаем процент ошибок приложения.
+Это стенд для одного вопроса: **что становится с Elasticsearch, если из трёх зон доступности разом выключить одну?** В Yandex Cloud три зоны — `ru-central1-a`, `ru-central1-b`, `ru-central1-d`. Стенд поднимает два независимых кластера в одной сети: в одном живёт Elasticsearch, в другом — приложение, которое непрерывно пишет и читает его. Приложение ходит в базу через внутренний балансировщик, а не напрямую.
 
-Путь: под `loadgen` → internal NLB Traefik кластера `elastic` (`10.0.1.33`) → Elasticsearch ClusterIP `:9200`. Прямого NLB Elasticsearch нет.
+Дальше зоны ломаются по очереди. На каждую зону — четыре разных сбоя: убийство подов, потеря 30% пакетов, задержка 500 мс и, наконец, полная сетевая изоляция зоны (виртуальная машина при этом остаётся `RUNNING`). На каждом шаге оба кластера ломаются одновременно и одной и той же зоной. После шага всё чинится и стенд ждёт восстановления, потом идёт следующий шаг, а затем следующая зона.
 
-Документ временный, 2 КБ: `id`, `ts`, `zone`, `body`. Состав полей будет переспрошен. Индекс `load`: 1 primary, 2 replica.
+Задача — не «уронить», а измерить. Поэтому во время всего прогона приложение печатает процент ошибок, а данные Elasticsearch сохраняются, чтобы после прогона сверить счётчики.
 
-## Стенд
+### Вопросы, на которые отвечает статья
 
-| Компонент | Куда |
-|---|---|
-| Elasticsearch 9.5.4 master ×3 + data ×6 | кластер `elastic`, зоны `a`/`b`/`d`, data по 2 на зону; data PVC **50 ГиБ** `yc-network-hdd`, heap 2 ГиБ; master PVC **20 ГиБ** `yc-network-hdd`, heap 1 ГиБ |
-| Kibana 9.5.4 ×3 | публичный NLB Traefik, `kibana.<IP>.sslip.io` |
-| loadgen ×60 (`replicaCount: 60`) | кластер `app`, spread по зонам |
-| vmks 0.92.1 | `app` и `elastic`, namespace `vmks` |
-| Traefik 41.6.0 ×3 | оба кластера: internal NLB и публичный NLB |
-| Chaos Mesh 2.8.4 | оба кластера |
-| goldpinger 1.1.3 | оба кластера, DaemonSet, namespace `goldpinger` |
+1. **Выживают ли запись и поиск** при отказе одной зоны из трёх?
+2. **Теряются ли документы**, которые `bulk` успел принять до сбоя?
+3. **Как процент ошибок зависит от типа сбоя и от зоны** — pod-kill, потеря, задержка, изоляция на `a`, `b`, `d`?
+4. **Переживает ли кворум master-нод** отказ зоны, и что происходит с состоянием кластера во время изоляции?
+5. **Возвращается ли кластер в норму сам**, без ручного вмешательства (переселения шардов и т. п.)?
+6. **Не мешает ли сам хаос измерению** — например, когда он задевает поды приложения в той же зоне?
 
-Ноды без публичного IP, HDD, preemptible. Исключение: API master обоих кластеров — внешний endpoint (`public_ip = true`), это осознанное решение для доступа с ноутбука. `elastic`: master 2 vCPU / 4 ГБ, data 4 vCPU / 8 ГБ. `app`: 2 vCPU / 4 ГБ. SA `elastic-chaos-monkey`. Kubernetes **1.33**.
+Ответы — в заключении, после разбора стенда и результатов прогона.
 
-Инфра: [INFRASTRUCTURE.md](INFRASTRUCTURE.md).
+## Основная часть
 
-## Установка
+### Стенд
 
-```bash
-export TF_VAR_folder_id=<folder id>
-terraform init && terraform apply
-eval "$(terraform output -raw elastic_credentials_command)"
-eval "$(terraform output -raw app_credentials_command)"
+Одна VPC, три общие подсети (`10.0.1.0/24`, `10.0.2.0/24`, `10.0.3.0/24` — по одной на зону). Исходящий трафик приватных подсетей идёт через один NAT-шлюз.
+
+Два управляемых кластера Kubernetes **1.33**:
+
+| Кластер | Что в нём | Роль |
+|---|---|---|
+| `elastic` | Elasticsearch, Kibana, ECK, Traefik, Chaos Mesh, goldpinger | база данных |
+| `app` | приложение-нагрузчик, VictoriaMetrics + Grafana, Traefik, Chaos Mesh, goldpinger | клиент и наблюдаемость |
+
+В кластере `elastic` девять нод: по одной master и по две data в каждой зоне. В `app` — три рабочие ноды, по одной на зону. Все ноды **preemptible**, на **HDD**, **без публичного IP**. Исключение — API-server каждого кластера: у него внешний endpoint, чтобы можно было работать с ноутбука.
+
+Ключевые размеры:
+
+| Компонент | Нода | Под | Диск |
+|---|---|---|---|
+| ES master ×3 | 2 vCPU / 4 ГБ | request/limit 1 vCPU / 2 ГБ, heap 1 ГБ | PVC 20 ГиБ + boot 64 ГиБ, HDD |
+| ES data ×6 | 4 vCPU / 16 ГБ | request 2 vCPU / limit 4 vCPU, 4 ГБ, heap 2 ГБ | PVC 50 ГиБ + boot 64 ГиБ, HDD |
+| app worker ×3 | 2 vCPU / 4 ГБ | loadgen request 10m / 32Mi, limit 200m / 128Mi | boot 64 ГиБ, HDD |
+| loadgen | 60 реплик, spread по зонам | — | — |
+
+Версии: Elasticsearch **9.5.4**, ECK **3.5.0**, Traefik **41.6.0**, victoria-metrics-k8s-stack **0.92.1**, Chaos Mesh **2.8.4**, goldpinger **1.1.3** (образ `bloomberg/goldpinger:3.11.3`), CloudNativePG **0.25.0** (PostgreSQL **17.5-22**).
+
+Elasticsearch разнесён по ролям: узлы `master` держат только кворум, узлы `data` хранят шарды. Это важно для эксперимента: изоляция одной зоны гасит сразу и master, и data этой зоны — но два master из трёх остаются живы, то есть кворум сохраняется. Репликация шардов настроена «сознанием зоны» (zone awareness) с принудительным распределением по трём зонам: индекс `load` имеет **1 primary и 2 replica**, по копии в каждой зоне.
+
+Приложение написано на Go. Один процесс с двумя горутинами: одна непрерывно шлёт `bulk`, другая — `_search`. Документ синтетический, ровно **2 КБ**, поля `id`, `ts`, `zone`, `body`. Индекс создаётся при старте с бесконечным retry, пока Elasticsearch не станет доступен. Счётчики успехов, ошибок и гистограммы задержек отдаются в формате Prometheus.
+
+### Путь запроса
+
+```
+под loadgen (кластер app)
+   → внутренний NLB Traefik кластера elastic  (10.0.1.33)
+      → Elasticsearch ClusterIP elastic-es-http :9200
 ```
 
-Traefik в оба контекста, chart 41.6.0 (OCI, `helm repo add` не нужен): `-f traefik-elastic-values.yaml` в контексте `elastic`, `-f traefik-app-values.yaml` в контексте `app`.
+Прямого балансировщика на Elasticsearch нет — весь трафик приложения идёт через Traefik `elastic`. Kibana в путь нагрузки не входит. Снаружи Elasticsearch не публикуется: наружу открыты только Kibana, Grafana и дашборды Chaos Mesh, каждое через свой публичный NLB.
 
-```bash
-helm --kube-context elastic upgrade --install traefik oci://ghcr.io/traefik/helm/traefik \
-  --namespace traefik --create-namespace --version 41.6.0 \
-  -f traefik-elastic-values.yaml
-helm --kube-context app upgrade --install traefik oci://ghcr.io/traefik/helm/traefik \
-  --namespace traefik --create-namespace --version 41.6.0 \
-  -f traefik-app-values.yaml
-```
+### Наблюдаемость
 
-vmks в оба контекста, chart 0.92.1, namespace `vmks`. Grafana и `chaos-mesh-admin-token` только в `app`. В `elastic` — тот же chart, без Grafana: CRD оператора нужны `VMAgent` и `VMServiceScrape`.
+Метрики собираются в **VictoriaMetrics** (namespace `vmks`) в обоих кластерах. Приложение, Elasticsearch, Traefik, Chaos Mesh, goldpinger и Cilium — все скрейпятся. Кластер `elastic` не хранит свои метрики у себя: его vmagent пишет напрямую в `vminsert` кластера `app` через внутренний NLB (`10.0.1.35:8480`). Grafana стоит одна, в кластере `app`, и читает всё оттуда. Состояние Grafana вынесено в отказоустойчивый PostgreSQL (CloudNativePG, три инстанса), поэтому пересоздание подов Grafana не теряет дашборды и аннотации.
 
-```bash
-kubectl --context app create namespace vmks --dry-run=client -o yaml | kubectl --context app apply -f -
-kubectl --context app apply -f manifests/chaos-mesh/rbac.yaml
-kubectl --context app -n vmks wait --for=jsonpath='{.data.token}' secret/chaos-mesh-admin-token --timeout=60s
-helm --kube-context app upgrade --install vmks \
-    oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack \
-    --namespace vmks --create-namespace \
-    --wait --version 0.92.1 --timeout 15m \
-    -f vmks-values.yaml
-helm --kube-context elastic upgrade --install vmks \
-    oci://ghcr.io/victoriametrics/helm-charts/victoria-metrics-k8s-stack \
-    --namespace vmks --create-namespace \
-    --wait --version 0.92.1 --timeout 15m \
-    -f vmks-elastic-values.yaml
-kubectl --context app apply -f manifests/exporter/traefik-scrape.yaml
-NLB_SUBNET_ID="$(terraform output -raw nlb_subnet_id)" envsubst < manifests/vminsert/nlb.yaml \
-  | kubectl --context app apply -f -
-```
+Каждый шаг хаоса и каждая смена security group помечаются аннотацией в Grafana. На графиках это отдельный слой, синхронизированный по времени со сбоями. Дашборды: `elastic-loadgen-app` (ошибки и латентность приложения), `elasticsearch-cluster` (здоровье кластера, шарды, сохранность данных), `goldpinger` (связность под-в-под), `cilium-node-latency` (сетевая задержка между узлами).
 
-ECK и exporter только в `elastic`:
+### Что и как ломается
 
-```bash
-helm repo add elastic https://helm.elastic.co
-helm --kube-context elastic upgrade --install elastic-operator elastic/eck-operator \
-  --namespace elastic-system --create-namespace --version 3.5.0 --set replicaCount=3
-./scripts/apply-eck.sh
-kubectl --context elastic apply -f manifests/exporter/elasticsearch-exporter.yaml
-```
+Порядок зон — `a`, `b`, `d`. Для каждой зоны четыре шага, каждый длится **2 минуты**, между шагами — **2 минуты покоя** (в покое нет ни хаоса, ни изоляции, но запись и поиск продолжаются).
 
-Chaos Mesh 2.8.4 в оба контекста: `-f chaos-mesh-elastic-values.yaml` и `-f chaos-mesh-app-values.yaml`.
+1. **pod-kill** — убийство подов зоны каждые 30 секунд: поды Elasticsearch и поды приложения.
+2. **network loss 30%** — потеря каждого третьего пакета, в обе стороны.
+3. **network delay 500 мс** — задержка в обе стороны.
+4. **изоляция зоны** — на все три node group этой зоны (`elastic-master-*`, `elastic-data-*`, `app-*`) вешается пустая security group. Нода остаётся `RUNNING`, но перестаёт говорить с внешним миром. Дополнительно из балансировщика выключается эта зона — и на Traefik `elastic`, и на `vminsert`, — чтобы трафик не уходил в зону, которой фактически нет.
 
-```bash
-helm repo add chaos-mesh https://charts.chaos-mesh.org
-helm --kube-context elastic upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
-  --namespace chaos-mesh --create-namespace --version 2.8.4 \
-  -f chaos-mesh-elastic-values.yaml
-helm --kube-context app upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
-  --namespace chaos-mesh --create-namespace --version 2.8.4 \
-  -f chaos-mesh-app-values.yaml
-kubectl --context app apply -f manifests/exporter/chaos-mesh-scrape.yaml
-```
+Первые три шага — это «проблемы на железе, пока зона ещё доступна». Четвёртый — полноценный отвал зоны. Одновременно ломается не больше одной зоны.
 
-goldpinger в оба контекста, chart 1.1.3 (image `bloomberg/goldpinger:3.11.3`), DaemonSet: пингует поды друг друга и отдаёт метрики на `:8080`. Метрики с обоих кластеров попадают в VictoriaMetrics кластера `app` (в `elastic` vmagent remote-write на `vminsert`).
+Важная деталь: security group переключается **только скриптами** (`isolate-zone.sh` / `restore-zone.sh`), а не через `terraform apply`. Иначе `terraform` в следующем прогоне «починит» эксперимент. Для этого у всех изолируемых node group в конфигурации стоит `ignore_changes` на `security_group_ids`.
 
-```bash
-helm repo add goldpinger https://bloomberg.github.io/goldpinger
-helm repo update
-helm --kube-context app upgrade --install goldpinger goldpinger/goldpinger \
-    --namespace goldpinger --create-namespace \
-    --version 1.1.3 -f goldpinger-values.yaml
-helm --kube-context elastic upgrade --install goldpinger goldpinger/goldpinger \
-    --namespace goldpinger --create-namespace \
-    --version 1.1.3 -f goldpinger-values.yaml
-kubectl --context app apply -f manifests/goldpinger/goldpinger-scrape.yaml
-kubectl --context elastic apply -f manifests/goldpinger/goldpinger-scrape.yaml
-kubectl --context app apply -f manifests/exporter/cilium-scrape.yaml
-kubectl --context elastic apply -f manifests/exporter/cilium-scrape.yaml
-```
+Перед первым прогоном на кластере обязательна проверка `verify-ng-isolation-sg.sh`: она выясняет, переживает ли node group смену security group без пересоздания узла. Если узел пересоздаётся (`VERDICT: RECREATE`), шаг изоляции использовать нельзя — скрипты рассчитаны только на «горячую» замену (`HOT-REPLACE`).
 
-loadgen в `app`, образ `ghcr.io/patsevanton/elastic-chaos-monkey-mixed` (собирается workflow `.github/workflows/docker.yml` при push в `main`, публикуется в GHCR; тег фиксирован в `loadgen/chart/values.yaml`):
+### Как измеряем
 
-```bash
-helm --kube-context app upgrade --install loadgen loadgen/chart \
-  --namespace load --create-namespace
-```
+Критерий «жив» намеренно без порога. Считаются два независимых процента ошибок — для записи и для поиска отдельно — и печатаются как есть. Смотрим не «упало ли ниже 99.9%», а на форму кривой и на то, растут ли счётчики.
 
-## Прогон
+Сохранность данных проверяется так: счётчик успешных `bulk` у приложения сравнивается с `_count` индекса в Elasticsearch. Если успешный `bulk` вернул успех, документ обязан находиться в базе. Дополнительно выборка `id` проверяется через `mget`. Проверка идёт **после каждого шага**, а не один раз в конце прогона.
 
-Перед первым разом на каждой node group, которую будут изолировать:
+Отдельно отслеживается состояние кластера: пока зона изолирована, ожидается `yellow` (копия шарда изолированной зоны не размещается), после восстановления — `green` без ручного переселения шардов.
 
-```bash
-kubectl config use-context elastic
-./scripts/verify-ng-isolation-sg.sh "$(terraform output -raw zone_isolation_sg_id)" ru-central1-a elastic-master-a
-./scripts/verify-ng-isolation-sg.sh "$(terraform output -raw zone_isolation_sg_id)" ru-central1-a elastic-data-a
-```
+### Как воспроизвести
 
-То же для `elastic-master-b`, `elastic-master-d`, `elastic-data-b`, `elastic-data-d` и, в контексте `app`, для `app-a`, `app-b`, `app-d`. `VERDICT: RECREATE` — isolate/restore не использовать.
+Требуется: `yc` CLI, Terraform ≥ 1.3, `kubectl`, Helm ≥ 3, `jq`, `curl`, `envsubst`.
 
-```bash
-./scripts/chaos-run.sh
-```
+Кратко порядок такой:
 
-Порядок зон: `a`, `b`, `d`. На зону: 2 минуты pod-kill (каждые 30 с), 2 минуты покой, 2 минуты loss 30% (`direction: both`), покой, 2 минуты delay 500 мс, покой, 2 минуты изоляция, restore, покой.
+1. `export TF_VAR_folder_id=<folder id>`, затем `terraform init && terraform apply`. Apply идемпотентен: собранный стенд — `No changes`, несобранный — создаётся.
+2. Получить kubeconfig обоих кластеров из `terraform output` (команды `*_credentials_command`).
+3. Поднять Traefik, VictoriaMetrics (+ CNPG для Grafana), ECK, Chaos Mesh, goldpinger и loadgen.
+4. Прогнать проверку security group для каждой изолируемой node group.
+5. Запустить `./scripts/chaos-run.sh`.
 
-| Зона | Шаг | bulk err % | search err % | _count |
+Полный пошаговый порядок установки (все helm-команды, манифесты, проверки после установки) — в [AGENTS.md](AGENTS.md) и в [плане стенда](docs/superpowers/plans/2026-09-30-elastic-chaos-total.md). Устройство инфраструктуры — в [INFRASTRUCTURE.md](INFRASTRUCTURE.md), исходный замысел — в [спеке](docs/superpowers/specs/2026-09-30-elastic-chaos-design.md).
+
+Останов: `Ctrl-C` в `chaos-run.sh` снимает текущий хаос и, если зона изолирована, восстанавливает её. Вручную: остановить нагрузку, вызвать `restore-zone.sh`, удалить Chaos-объекты. Ни `terraform apply`, ни выключение VM для этого не используются.
+
+### Границы эксперимента
+
+Осознанно вне рамок: Rally и бенчмарк-корпус; geo-запросы; выключение VM (`yc compute instance stop`); Chaos Mesh на фоне уже изолированной зоны (контроллер до неё не достучится); IOChaos и StressChaos; сравнение dedicated и mixed как отдельный эксперимент; публичный Elasticsearch и TLS на HTTP; автотесты хаоса в CI. Версии Kubernetes, Elasticsearch, ECK и Traefik в рамках стенда не меняются.
+
+## Результаты прогона
+
+Прогон **2026-09-27**. `err %` — на конец шага, доля ошибок по счётчикам `loadgen_bulk_*` / `loadgen_search_*`; счётчики накопительные.
+
+| Зона | Шаг | bulk err % | search err % | `_count` |
 |---|---|---|---|---|
 | a | pod-kill | 0.016 | 0.021 | 229582 |
 | a | loss | 0.015 | 0.020 | 244250 |
@@ -145,9 +127,34 @@ kubectl config use-context elastic
 | d | delay | 0.002 | 0.025 | 455014 |
 | d | isolate | 0.003 | 0.023 | 478193 |
 
-Прогон 2026-09-27. `err %` — на конец шага, `err/(ok+err)·100` по счётчикам `loadgen_bulk_*`/`loadgen_search_*`; счётчики накопительные.
-`a/isolate`: `_count` не получен — нода зоны `a` изолирована.
-`d`: pod-kill задевает поды loadgen, счётчики сбрасываются — проценты зоны `d` считаются от последнего рестарта.
-Документов не потеряно: `_count` только растёт, финал прогона — 478193.
+Примечания к таблице:
 
-Стоп: Ctrl-C в `chaos-run.sh` снимает Chaos CR и вызывает restore, если зона изолирована. Вручную: остановить loadgen, `./scripts/restore-zone.sh`, удалить Chaos CR. Не `terraform apply` и не power-off.
+- `a/isolate`: `_count` получить не удалось — нода зоны `a` была изолирована, запрос не проходил.
+- `d`: pod-kill задевает и поды приложения, счётчики успели сброситься; проценты зоны `d` считаются от последнего рестарта, поэтому выглядят ниже.
+- Документов не потеряно: `_count` только растёт, финальное значение — **478193**.
+
+## Заключение: ответы на вопросы
+
+**1. Выживают ли запись и поиск при отказе одной зоны?**
+Да. За весь прогон по всем трём зонам и всем четырём типам сбоя доля ошибок не превысила **0.03%**, и запись, и поиск продолжали работать непрерывно. Ни один шаг не привёл к остановке записи или чтения.
+
+**2. Теряются ли документы, которые `bulk` успел принять?**
+Нет. `_count` индекса монотонно рос весь прогон — с 229582 на первой зоне до 478193 в конце, ни одного провала. Всё, что `bulk` подтвердил успехом, осталось в базе.
+
+**3. Как процент ошибок зависит от типа сбоя и зоны?**
+Разброс маленький, но виден устойчивый тренд. По типу сбоя: **pod-kill** даёт самый высокий процент ошибок, **изоляция** — самый низкий, потеря и задержка — между ними (в зонах `a` и `b` это выполняется и по записи, и по поиску; в `d` цифры записи почти не различаются). По роли операции: **поиск ошибается чаще записи** на всех шагах. По зонам: зона `a` даёт заметно больший процент, чем `b` и `d`; самые низкие цифры — в `d`, но там счётчики сбрасывались из-за pod-kill и перезапуска приложения (см. примечания), так что напрямую сравнивать `d` с остальными нельзя. По строкам без сброса (`a`, `b`) картина ровная: `a` — `0.012`–`0.021%`, `b` — `0.009`–`0.019%`.
+
+**4. Переживает ли кворум master отказ зоны, и что с состоянием кластера?**
+Да, кворум переживает: из трёх master-нод изолируется только одна, две остаются живы — этого достаточно для работы кластера. Пока зона изолирована, кластер находится в состоянии **`yellow`**: копия шарда изолированной зоны не размещается на живых зонах, но данные доступны.
+
+**5. Возвращается ли кластер в норму сам?**
+Да, без ручного вмешательства. После `restore-zone.sh` (возврат security group и включение зоны обратно в оба балансировщика) кластер снова становится **`green`**, копия шарда садится на место сама. Переселение шардов вручную не делалось ни разу — сценарий восстановления на это и рассчитан.
+
+**6. Не мешает ли хаос измерению?**
+Мешает, и это видно в цифрах. `pod-kill` работает по всем подам целевой зоны, включая поды приложения: когда убивают сам `loadgen`, его накопительные счётчики сбрасываются вместе с подом. Сильнее всего это проявилось в зоне `d`, поэтому её проценты считаются от последнего рестарта и занижены. Для чистоты сравнения между зонами стоит смотреть на `a` и `b`, где эффект слабее, либо на дашборды, где ошибки видны по времени, а не по накопительному счётчику.
+
+### Что осталось за кадром
+
+- Состав полей документа (сейчас `id`, `ts`, `zone`, `body`) — временный, 2 КБ.
+- Скрейпинг `cilium-operator` и `hubble` пока не настроен (дашборд работает и без них).
+- В метриках остался перегруженный label `cluster` — см. [TODO.md](TODO.md).
