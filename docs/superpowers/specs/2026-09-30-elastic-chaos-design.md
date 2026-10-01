@@ -52,7 +52,7 @@
 |---|---|---|
 | es master | master | 2 vCPU / 4 ГБ, HDD |
 | es data | data | 4 vCPU / 8 ГБ, HDD |
-| app | worker | 2 vCPU / 4 ГБ, HDD |
+| app | worker | 2 vCPU / 8 ГБ, HDD |
 
 Группы `elastic-master-a|b|d` и `elastic-data-a|b|d`, плюс `app-a|b|d`. `lifecycle.ignore_changes` на `security_group_ids` у каждой из девяти групп.
 
