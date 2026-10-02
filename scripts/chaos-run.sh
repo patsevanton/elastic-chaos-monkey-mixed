@@ -10,10 +10,25 @@ cleanup() {
     kubectl --context "$ctx" delete podchaos,networkchaos --all -A --ignore-not-found || true
   done
   if [ -f "$ROOT/.state/zone-isolate.env" ]; then
-    "$ROOT/scripts/restore-zone.sh" || true
+    "$ROOT/scripts/restore-zone.sh" || rm -f "$ROOT/.state/zone-isolate.env"
   fi
 }
 trap cleanup EXIT
+
+# Перед началом работ: если остался state от прошлого прогона — восстановить
+# зону; если state stale/невалиден — удалить, чтобы isolate-zone.sh не упал.
+preflight_state() {
+  local sf="$ROOT/.state/zone-isolate.env"
+  [ -f "$sf" ] || return 0
+  echo "найден $sf от прошлого прогона"
+  if "$ROOT/scripts/restore-zone.sh"; then
+    echo "зона восстановлена, state очищен"
+  else
+    echo "restore не удался (stale state) — удаляю $sf" >&2
+    rm -f "$sf"
+  fi
+}
+preflight_state
 
 annotate() {
   local zone="$1" step="$2" phase="$3"
