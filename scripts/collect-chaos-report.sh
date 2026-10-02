@@ -254,3 +254,6 @@ done < "$OUT_DIR/windows.tsv"
 echo "сырые данные: $OUT_DIR"
 echo "окна: $OUT_DIR/windows.tsv"
 echo "анализ: $ANALYSIS"
+
+# --- markdown-отчёт с таблицами и ссылками на графики (детерминированно) ---
+RUN_DATE="$RUN_DATE" OUT_DIR="$OUT_DIR" ZONES="$ZONES" "$ROOT/scripts/make-chaos-report.sh"
