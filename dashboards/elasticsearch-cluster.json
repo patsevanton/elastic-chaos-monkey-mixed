@@ -955,6 +955,117 @@
             "x": 0,
             "y": 85
           }
+        },
+        {
+          "title": "cluster health: red / yellow",
+          "description": "Статус здоровья кластера по цветам: 1 — соответствующий цвет активен, 0 — нет. Появление red означает недоступность первичных шардов, yellow — незанятые реплики.",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "0",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "red" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }
+                ]
+              },
+              {
+                "matcher": { "id": "byName", "options": "yellow" },
+                "properties": [
+                  { "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "max(elasticsearch_cluster_health_status{cluster=\"elastic\",color=\"red\"})",
+              "legendFormat": "red"
+            },
+            {
+              "refId": "B",
+              "expr": "max(elasticsearch_cluster_health_status{cluster=\"elastic\",color=\"yellow\"})",
+              "legendFormat": "yellow"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 85
+          }
+        },
+        {
+          "title": "number of nodes",
+          "description": "Число нод Elasticsearch, известных кластеру (cluster health number_of_nodes). Падение означает выход нод из кластера при изоляции или сбое.",
+          "type": "timeseries",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "VictoriaMetrics"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "No data",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "showPoints": "never",
+                "fillOpacity": 10,
+                "spanNulls": true
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(elasticsearch_cluster_health_number_of_nodes{cluster=\"elastic\"})"
+            }
+          ],
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 93
+          }
         }
       ],
       "gridPos": {

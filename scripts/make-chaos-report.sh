@@ -3,8 +3,9 @@
 # из уже собранных скриптом collect-chaos-report.sh данных (.state/chaos-report-<date>/).
 #
 # Таблицы и ссылки на графики строит скрипт; качественные «Вывод»/«Ключевые находки»
-# дописывает AI (см. AGENTS.md). Метрики в «Эффект» и в Explore-ссылке берутся из
-# одной и той же карты EFFECT_METRICS, поэтому текст и график всегда соответствуют друг другу.
+# дописывает AI (см. AGENTS.md). Колонка «Дашборд → панель» строится по карте
+# dashboard_panel, колонка «График» — по карте effect_metrics: одни и те же метрики
+# попадают и в дашборд, и в Explore-ссылку, поэтому представления согласованы.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -35,6 +36,27 @@ expr_of() {
     es_pending)            echo 'sum(elasticsearch_cluster_health_number_of_pending_tasks{cluster="elastic"})' ;;
     goldpinger_unhealthy)  echo 'sum(goldpinger_nodes_health_total{status="unhealthy"})' ;;
     cilium_max_s)          echo 'max(cilium_node_connectivity_latency_seconds)' ;;
+    *) return 1 ;;
+  esac
+}
+
+# --- дашборд/панель, где видна метрика (для колонки «Дашборд → панель») ---
+# Формат: "uid дашборда|Название дашборда|Название панели"
+dashboard_panel() {
+  case "$1" in
+    bulk_err_pct)         echo "elastic-loadgen-app|elastic-loadgen-app|Bulk error rate" ;;
+    search_err_pct)       echo "elastic-loadgen-app|elastic-loadgen-app|Search error rate" ;;
+    bulk_ok_rps)          echo "elastic-loadgen-app|elastic-loadgen-app|Bulk throughput" ;;
+    search_ok_rps)        echo "elastic-loadgen-app|elastic-loadgen-app|Search rate" ;;
+    bulk_p99_s)           echo "elastic-loadgen-app|elastic-loadgen-app|Bulk latency (p50/p90/p99)" ;;
+    search_p99_s)         echo "elastic-loadgen-app|elastic-loadgen-app|Search latency (p50/p90/p99)" ;;
+    es_unassigned)        echo "elasticsearch-cluster|elasticsearch-cluster|unassigned shards" ;;
+    es_health_red)        echo "elasticsearch-cluster|elasticsearch-cluster|cluster health: red / yellow" ;;
+    es_nodes)             echo "elasticsearch-cluster|elasticsearch-cluster|number of nodes" ;;
+    es_queue)             echo "elasticsearch-cluster|elasticsearch-cluster|thread pool: в очереди (по пулам indexing/search)" ;;
+    es_pending)           echo "elasticsearch-cluster|elasticsearch-cluster|pending tasks (master queue)" ;;
+    goldpinger_unhealthy) echo "goldpinger|goldpinger|healthy / unhealthy узлов" ;;
+    cilium_max_s)         echo "cilium-node-latency|Cilium Node Connectivity Latency|Top 10 per-nodes Cilium ICMP Latency" ;;
     *) return 1 ;;
   esac
 }
@@ -75,33 +97,40 @@ explore_url() {
   printf '%s/explore?schemaVersion=1&orgId=1&panes=%s' "$GRAFANA_URL" "$(jq -rn --arg p "$pane" '$p|@uri')"
 }
 
-# --- форматирование значения ---
-fmt() { awk -v v="$1" 'BEGIN{ if (v=="") {print "—"; exit} if (v+0==int(v+0) && (v+0>=100 || v+0<=-100)) printf "%.0f", v; else printf "%.3g", v }'; }
-
-# --- ячейка «Эффект» из analysis.tsv по idx ---
-effect_cell() {
-  local idx="$1"; shift
-  local m out=""
-  for m in "$@"; do
-    local row
-    row="$(awk -F'\t' -v i="$idx" -v mm="$m" '$1==i && $6==mm{print; exit}' "$OUT_DIR/analysis.tsv")"
-    [ -z "$row" ] && continue
-    local pmin pavg pmax emin eavg emax
-    pmin="$(cut -f7 <<<"$row")"; pavg="$(cut -f8 <<<"$row")"; pmax="$(cut -f9 <<<"$row")"
-    emin="$(cut -f10 <<<"$row")"; eavg="$(cut -f11 <<<"$row")"; emax="$(cut -f12 <<<"$row")"
-    if [ -z "$emax" ]; then
-      out+="\`$m\` — данных мало; "
-    else
-      out+="\`$m\` $(fmt "$pavg") → **$(fmt "$eavg")** (max $(fmt "$emax")); "
-    fi
-  done
-  printf '%s' "${out%; }"
-}
-
 link_for() {
   local idx="$1" pre_start="$2" end="$3"; shift 3
   local url; url="$(explore_url "$(( $(epoch "$pre_start") * 1000 ))" "$(( $(epoch "$end") * 1000 ))" "$@")"
   printf '[график](%s)' "$url"
+}
+
+# --- ссылка на дашборд за окно pre+event ---
+dash_url() {
+  local uid="$1" pre_start="$2" end="$3"
+  printf '%s/d/%s?from=%s&to=%s' "$GRAFANA_URL" "$uid" "$(( $(epoch "$pre_start") * 1000 ))" "$(( $(epoch "$end") * 1000 ))"
+}
+
+# --- ячейка «Дашборд → панель» по списку метрик (панели группируются по дашборду) ---
+where_cell() {
+  local pre_start="$1" end="$2"; shift 2
+  local m map uid dname pname out="" nopanel=""
+  local -A dname_of panels_of
+  local -a order
+  for m in "$@"; do
+    if map="$(dashboard_panel "$m" 2>/dev/null)"; then
+      uid="$(cut -d'|' -f1 <<<"$map")"
+      dname="$(cut -d'|' -f2 <<<"$map")"
+      pname="$(cut -d'|' -f3 <<<"$map")"
+      if [ -z "${dname_of[$uid]:-}" ]; then order+=("$uid"); dname_of[$uid]="$dname"; fi
+      panels_of[$uid]+="«${pname}», "
+    else
+      nopanel+="\`$m\`, "
+    fi
+  done
+  for uid in "${order[@]}"; do
+    out+="[${dname_of[$uid]}]($(dash_url "$uid" "$pre_start" "$end")) → ${panels_of[$uid]%, } ; "
+  done
+  [ -n "$nopanel" ] && out+="${nopanel%, } — нет панели; "
+  printf '%s' "${out%; }"
 }
 
 label_for() {
@@ -125,9 +154,10 @@ label_for() {
   echo "запрашивает в VictoriaMetrics метрики эффекта и считает \`pre\`-окно (равное событию, непосредственно перед ним)"
   echo "и \`event\`-окно. Порог «существенное изменение» не задан — значение трактуется по форме кривой, как в README."
   echo
-  echo "Колонка **Эффект** — детерминированная выжимка из \`analysis.tsv\`: \`avg → avg (max)\`. Колонка **График** —"
-  echo "ссылка на Grafana Explore (datasource \`$DS_UID\`) с теми же метриками за окно \`pre + event\`; текст и график"
-  echo "соответствуют друг другу по построению. Колонка **Вывод** и раздел «Ключевые находки» дописывает AI."
+  echo "Колонка **Дашборд → панель** указывает, в каком дашборде и на какой панели видна метрика события;"
+  echo "ссылка на дашборд открывается за окно \`pre + event\`. Колонка **График** — ссылка на Grafana Explore"
+  echo "(datasource \`$DS_UID\`) с теми же метриками за то же окно. Колонка **Вывод** и раздел «Ключевые находки»"
+  echo "дописывает AI по \`analysis.tsv\` и графикам."
   echo
   echo "> Оговорка: baseline ошибок у loadgen обычно нулевой, рост с нуля даёт \`inf%\`. Низкоуровневые метрики ES"
   echo "> (\`es_nodes\`, \`es_docs_load\`) дискретны и в коротких SG-окнах дают артефакты — читать как «данных мало»."
@@ -136,26 +166,26 @@ label_for() {
   echo
   echo "### Chaos-шаги (зона \`$ZONES\`)"
   echo
-  echo "| # | Шаг | Эффект \`event\` относительно \`pre\` | График | Вывод |"
+  echo "| # | Шаг | Дашборд → панель | График | Вывод |"
   echo "|---|---|---|---|---|"
   tail -n +2 "$OUT_DIR/windows.tsv" | sort -t$'\t' -k6,6 | while IFS=$'\t' read -r idx kind zone scope action start end pre_start pre_end; do
     [ -z "${idx:-}" ] && continue
     [ "$kind" = chaos ] || continue
     metric_list="$(effect_metrics "$kind" "$scope" "$action")"
     # shellcheck disable=SC2086
-    printf '| %s | %s | %s | %s | _заполняет AI_ |\n' "$idx" "$(label_for "$kind" "$zone" "$scope" "$action")" "$(effect_cell "$idx" $metric_list)" "$(link_for "$idx" "$pre_start" "$end" $metric_list)"
+    printf '| %s | %s | %s | %s | _заполняет AI_ |\n' "$idx" "$(label_for "$kind" "$zone" "$scope" "$action")" "$(where_cell "$pre_start" "$end" $metric_list)" "$(link_for "$idx" "$pre_start" "$end" $metric_list)"
   done
   echo
   echo "### Смена security group (зона \`$ZONES\`)"
   echo
-  echo "| # | Аннотация | Эффект | График | Вывод |"
+  echo "| # | Аннотация | Дашборд → панель | График | Вывод |"
   echo "|---|---|---|---|---|"
   tail -n +2 "$OUT_DIR/windows.tsv" | sort -t$'\t' -k6,6 | while IFS=$'\t' read -r idx kind zone scope action start end pre_start pre_end; do
     [ -z "${idx:-}" ] && continue
     [ "$kind" = sg ] || continue
     metric_list="$(effect_metrics "$kind" "$scope" "$action")"
     # shellcheck disable=SC2086
-    printf '| %s | %s | %s | %s | _заполняет AI_ |\n' "$idx" "$(label_for "$kind" "$zone" "$scope" "$action")" "$(effect_cell "$idx" $metric_list)" "$(link_for "$idx" "$pre_start" "$end" $metric_list)"
+    printf '| %s | %s | %s | %s | _заполняет AI_ |\n' "$idx" "$(label_for "$kind" "$zone" "$scope" "$action")" "$(where_cell "$pre_start" "$end" $metric_list)" "$(link_for "$idx" "$pre_start" "$end" $metric_list)"
   done
   echo
   echo "## Ключевые находки"
