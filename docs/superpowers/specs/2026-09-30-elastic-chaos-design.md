@@ -113,7 +113,7 @@ ECK operator и Chaos Mesh controller: по 3 реплики в своём кл�
 
 Порядок зон: `a`, затем `b`, затем `d`. На каждом шаге оба кластера одновременно.
 
-Для каждой зоны четыре шага, каждый **2 минуты** (`STEP_SECONDS` в `scripts/chaos-run.sh`, `duration: 2m` в NetworkChaos), между любыми двумя шагами **2 минуты покоя**. В покое нет Chaos Mesh и нет изоляции. Запись и поиск идут и в шаге, и в покое.
+Для каждой зоны четыре шага, каждый **2 минуты** (`STEP_SECONDS` в `scripts/chaos-run.sh`, `duration: 2m` в NetworkChaos), между любыми двумя шагами **5 минут покоя** (`QUIET_SECONDS=300`). В покое нет Chaos Mesh и нет изоляции. Запись и поиск идут и в шаге, и в покое.
 
 1. **Pod-kill** — 2 минуты, kill каждые 30 секунд. Цель: поды loadgen и поды Elasticsearch в этой зоне (master и data).
 2. **Network loss 30%** — 2 минуты, те же поды.
@@ -122,7 +122,7 @@ ECK operator и Chaos Mesh controller: по 3 реплики в своём кл�
 
 `disable-zones` не чаще раза в 2 минуты на один NLB.
 
-После pod-kill, loss и delay: Elasticsearch `health: green`, поды loadgen `Ready`, затем 2 минуты покоя. После изоляции: restore, затем то же ожидание green и Ready, затем покой, затем следующая зона. Пока зона изолирована, green не требуется: кластер yellow по контракту awareness.
+После pod-kill, loss и delay: Elasticsearch `health: green`, поды loadgen `Ready`, затем 5 минут покоя. После изоляции: restore, затем то же ожидание green и Ready, затем покой, затем следующая зона. Пока зона изолирована, green не требуется: кластер yellow по контракту awareness.
 
 Одновременно не больше одной зоны.
 

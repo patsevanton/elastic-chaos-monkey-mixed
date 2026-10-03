@@ -3,6 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 STEP="${STEP_SECONDS:-120}"
+QUIET="${QUIET_SECONDS:-300}"
 KILL_EVERY="${KILL_EVERY:-30}"
 
 cleanup() {
@@ -50,7 +51,7 @@ quiet() {
   local start=$SECONDS
   kubectl --context elastic -n elastic wait --for=jsonpath='{.status.health}'=green elasticsearch/elastic --timeout=120s || true
   kubectl --context app -n load rollout status deployment/loadgen --timeout=120s || true
-  local left=$((STEP - (SECONDS - start)))
+  local left=$((QUIET - (SECONDS - start)))
   if [ "$left" -gt 0 ]; then sleep "$left"; fi
 }
 
