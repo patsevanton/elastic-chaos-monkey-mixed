@@ -44,7 +44,23 @@ if [ "$fail" -ne 0 ]; then
   echo "один или несколько node-group update не удались" >&2
   exit 1
 fi
-yc load-balancer network-load-balancer enable-zones --id "$NLB_TRAEFIK_ID" --zones "$ZONE"
-yc load-balancer network-load-balancer enable-zones --id "$NLB_VMINSERT_ID" --zones "$ZONE"
+enable_zone() {
+  local id="$1" out rc
+  out="$(yc load-balancer network-load-balancer enable-zones --id "$id" --zones "$ZONE" 2>&1)" && rc=0 || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    # yc 1.32.0: на уже включённой зоне enable-zones — no-op, но CLI падает с
+    # "unexpected response type: google.protobuf.Empty". Это не сбой действия,
+    # поэтому не роняем restore (иначе state не будет удалён).
+    if grep -q "unexpected response type: google.protobuf.Empty" <<<"$out"; then
+      echo "enable-zones $id: зона $ZONE уже включена (no-op yc)" >&2
+    else
+      echo "$out" >&2
+      return 1
+    fi
+  fi
+}
+
+enable_zone "$NLB_TRAEFIK_ID"
+enable_zone "$NLB_VMINSERT_ID"
 rm -f "$STATE_FILE"
 echo "zone $ZONE restored"
