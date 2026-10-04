@@ -19,7 +19,7 @@
 - `lifecycle.ignore_changes` на `security_group_ids` у всех девяти node group (6 elastic + 3 app).
 - VictoriaMetrics только в namespace `vmks`. В values отключить scrape и recording-правила control-plane Yandex Managed K8s (etcd, scheduler, controller-manager, `kube-scheduler.rules`).
 - Зону изолировать и чинить только скриптами, не `yc compute instance stop` и не `terraform apply`.
-- `disable-zones` не чаще раза в 2 минуты на один NLB.
+- `disable-zones` не чаще раза в 2 минуты на один NLB. Изолируются все NLB трафика зоны: Traefik `elastic`, `vminsert`, внутренний и внешний NLB Traefik `app`; вызовы на разные NLB — параллельно и до применения SG.
 - SA остаётся `elastic-chaos-monkey`. Контексты kubectl: `elastic` и `app`. После destroy/apply контексты перезаписываются `eval "$(terraform output -raw …_credentials_command)"` — это норма.
 - NetworkChaos `direction: both`.
 - Шаг хаоса — 2 минуты (`STEP_SECONDS=120`). Pod-kill повторяется каждые 30 секунд всё окно шага. Между шагами — 5 минут покоя (`QUIET_SECONDS=300`).

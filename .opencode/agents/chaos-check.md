@@ -29,6 +29,6 @@ permission:
 
 Chaos Mesh: `./scripts/check-chaos.sh podchaos es-pod-kill`, `./scripts/check-chaos.sh networkchaos es-network-loss` / `es-network-delay` — ES-хаос, ns `elastic`, контекст `elastic`. Для приложения: `./scripts/check-chaos.sh podchaos loadgen-pod-kill`, `./scripts/check-chaos.sh networkchaos loadgen-network-loss` / `loadgen-network-delay` — ns `load`, контекст `app`. Скрипт сам определяет контекст и namespace по имени CR; третий/четвёртый аргументы переопределяют context/namespace. Успех только если phase `Injected`.
 
-Отвал зоны: нода этой зоны не Ready, VM `RUNNING`, InternalIP не отвечает на ping. `disable-zones` только на NLB Traefik кластера `elastic` и NLB `vminsert`, не на `chaos-es-http` и не на Traefik кластера `app`. Target ноды помечен `zone_shifted`. VM `RUNNING` отличает нашу изоляцию от preemptible-отвала Яндекса.
+Отвал зоны: нода этой зоны не Ready, VM `RUNNING`, InternalIP не отвечает на ping. `disable-zones` на всех NLB трафика зоны: Traefik кластера `elastic`, `vminsert` и оба NLB Traefik кластера `app` (внутренний и внешний; не на `chaos-es-http`). Target ноды помечен `zone_shifted`. VM `RUNNING` отличает нашу изоляцию от preemptible-отвала Яндекса.
 
 Если проверка не сошлась — код выхода ненулевой и факты, без починки.

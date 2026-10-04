@@ -7,7 +7,7 @@ if [ ! -f "$STATE_FILE" ]; then
   echo "нет $STATE_FILE" >&2
   exit 1
 fi
-ZONE="" ELASTIC_MASTER_NG="" ELASTIC_DATA_NG="" APP_NG="" ELASTIC_MASTER_SG="" ELASTIC_DATA_SG="" APP_SG="" NLB_TRAEFIK_ID="" NLB_VMINSERT_ID=""
+ZONE="" ELASTIC_MASTER_NG="" ELASTIC_DATA_NG="" APP_NG="" ELASTIC_MASTER_SG="" ELASTIC_DATA_SG="" APP_SG="" NLB_TRAEFIK_ID="" NLB_VMINSERT_ID="" NLB_APP_TRAEFIK_ID="" NLB_APP_PUBLIC_ID=""
 # shellcheck disable=SC1090
 source "$STATE_FILE"
 if [ -z "$ZONE" ] || [ -z "$ELASTIC_MASTER_NG" ] || [ -z "$ELASTIC_DATA_NG" ] || [ -z "$APP_NG" ] || [ -z "$NLB_TRAEFIK_ID" ] || [ -z "$NLB_VMINSERT_ID" ]; then
@@ -62,5 +62,9 @@ enable_zone() {
 
 enable_zone "$NLB_TRAEFIK_ID"
 enable_zone "$NLB_VMINSERT_ID"
+# State от прошлых прогонов (до добавления app-NLB) не содержит этих ключей —
+# включаем зону только для тех NLB, что реально изолировались.
+if [ -n "$NLB_APP_TRAEFIK_ID" ]; then enable_zone "$NLB_APP_TRAEFIK_ID"; fi
+if [ -n "$NLB_APP_PUBLIC_ID" ]; then enable_zone "$NLB_APP_PUBLIC_ID"; fi
 rm -f "$STATE_FILE"
 echo "zone $ZONE restored"

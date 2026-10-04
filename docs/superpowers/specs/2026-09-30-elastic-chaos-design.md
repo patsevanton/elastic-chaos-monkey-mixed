@@ -118,7 +118,7 @@ ECK operator и Chaos Mesh controller: по 3 реплики в своём кл�
 1. **Pod-kill** — 2 минуты, kill каждые 30 секунд. Цель: поды loadgen и поды Elasticsearch в этой зоне (master и data).
 2. **Network loss 30%** — 2 минуты, те же поды.
 3. **Network delay 500 мс** — 2 минуты, те же поды.
-4. **Изоляция зоны** — 2 минуты. Пустой SG `zone-isolation` на node group `elastic-master-*`, `elastic-data-*` и `app-*` этой зоны. VM остаётся `RUNNING`. На NLB Traefik es-кластера (путь app → ES) — `disable-zones` этой зоны. На NLB `vminsert` — тоже, иначе remote write из изолированной зоны es-кластера не отражает отвал. На app-кластере `disable-zones` нет: изоляции node group достаточно. Затем restore и следующий покой.
+4. **Изоляция зоны** — 2 минуты. Пустой SG `zone-isolation` на node group `elastic-master-*`, `elastic-data-*` и `app-*` этой зоны. VM остаётся `RUNNING`. На NLB Traefik es-кластера (путь app → ES) — `disable-zones` этой зоны. На NLB `vminsert` — тоже, иначе remote write из изолированной зоны es-кластера не отражает отвал. На обоих NLB Traefik app-кластера (внутренний `web` и внешний `public`) — тоже, иначе внешний NLB продолжает слать браузерный трафик (Grafana, Chaos Dashboard) в изолированную зону и запросы виснут. `disable-zones` на всех NLB делается параллельно и до применения SG. Затем restore и следующий покой.
 
 `disable-zones` не чаще раза в 2 минуты на один NLB.
 
@@ -159,7 +159,7 @@ Grafana --> vmselect
 
 - NetworkChaos: удалить CR, дождаться чистой сети, green и Ready.
 - Pod-kill: ECK поднимает под Elasticsearch; Deployment поднимает под приложения. Ждать green и Ready.
-- Зона: только restore-скрипт (SG + `enable-zones` на NLB es-кластера), не `terraform apply`, не удаление node group, не power-off.
+- Зона: только restore-скрипт (SG + `enable-zones` на всех NLB, включая оба NLB app-кластера), не `terraform apply`, не удаление node group, не power-off.
 - Preemptible: посторонний stop Yandex не считать экспериментом. Убита не та зона во время слота — слот перезапустить.
 - PVC ES зональные HDD: при изоляции зоны том остаётся в ней, под не едет в другую зону.
 
