@@ -65,9 +65,18 @@ apply_isolation_sg() {
 }
 
 echo "isolate $ZONE sg=$SG_ID ng=$MASTER_NG,$DATA_NG,$APP_NG"
-apply_isolation_sg "$MASTER_NG" "$MASTER_SUBNETS" "$SG_ID"
-apply_isolation_sg "$DATA_NG" "$DATA_SUBNETS" "$SG_ID"
-apply_isolation_sg "$APP_NG" "$APP_SUBNETS" "$SG_ID"
+pids=()
+apply_isolation_sg "$MASTER_NG" "$MASTER_SUBNETS" "$SG_ID" & pids+=("$!")
+apply_isolation_sg "$DATA_NG" "$DATA_SUBNETS" "$SG_ID" & pids+=("$!")
+apply_isolation_sg "$APP_NG" "$APP_SUBNETS" "$SG_ID" & pids+=("$!")
+fail=0
+for p in "${pids[@]}"; do
+  if ! wait "$p"; then fail=1; fi
+done
+if [ "$fail" -ne 0 ]; then
+  echo "один или несколько node-group update не удались" >&2
+  exit 1
+fi
 yc load-balancer network-load-balancer disable-zones --id "$NLB_TRAEFIK_ID" --zones "$ZONE"
 sleep 120
 yc load-balancer network-load-balancer disable-zones --id "$NLB_VMINSERT_ID" --zones "$ZONE"

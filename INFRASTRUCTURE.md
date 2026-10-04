@@ -32,7 +32,7 @@ Isolate ставит пустой SG на `elastic-master-*`, `elastic-data-*` �
 
 Restore возвращает сохранённые SG и делает `enable-zones` на оба NLB.
 
-Перед первым прогоном `./scripts/verify-ng-isolation-sg.sh` для каждой изолируемой node group в её kubectl-контексте. `VERDICT: RECREATE` — isolate/restore не использовать.
+`yc managed-kubernetes node-group update` меняет security group на живой VM, не пересоздавая узел (hot-replace), поэтому отдельно проверять пересоздание не нужно. Применение SG к трём node group зоны идёт параллельно: три `yc node-group update` в фоне, скрипты ждут все три.
 
 `disable-zones` не чаще раза в 2 минуты на один NLB.
 

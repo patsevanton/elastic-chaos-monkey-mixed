@@ -78,7 +78,7 @@ Elasticsearch разнесён по ролям: узлы `master` держат �
 
 Важная деталь: security group переключается **только скриптами** (`isolate-zone.sh` / `restore-zone.sh`), а не через `terraform apply`. Иначе `terraform` в следующем прогоне «починит» эксперимент. Для этого у всех изолируемых node group в конфигурации стоит `ignore_changes` на `security_group_ids`.
 
-Перед первым прогоном на кластере обязательна проверка `verify-ng-isolation-sg.sh`: она выясняет, переживает ли node group смену security group без пересоздания узла. Если узел пересоздаётся (`VERDICT: RECREATE`), шаг изоляции использовать нельзя — скрипты рассчитаны только на «горячую» замену (`HOT-REPLACE`).
+`yc managed-kubernetes node-group update` меняет security group на живой VM, не пересоздавая узел (hot-replace), поэтому отдельно проверять пересоздание не нужно.
 
 ### Как измеряем
 

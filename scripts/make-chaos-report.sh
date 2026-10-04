@@ -3,9 +3,10 @@
 # из уже собранных скриптом collect-chaos-report.sh данных (.state/chaos-report-<date>/).
 #
 # Таблицы и ссылки на графики строит скрипт; качественные «Вывод»/«Ключевые находки»
-# дописывает AI (см. AGENTS.md). Колонка «Дашборд → панель» строится по карте
-# dashboard_panel, колонка «График» — по карте effect_metrics: одни и те же метрики
-# попадают и в дашборд, и в Explore-ссылку, поэтому представления согласованы.
+# дописывает AI (см. AGENTS.md). Для каждого события берётся единый набор метрик
+# (effect_metrics), поэтому колонки «Дашборд → панель» и «График» покрывают любую
+# метрику, которую AI может упомянуть в «Выводе». AI обязан называть в тексте
+# только метрики из набора события — иначе появится упоминание без ссылки.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -33,8 +34,11 @@ expr_of() {
     es_health_red)         echo 'max(elasticsearch_cluster_health_status{cluster="elastic",color="red"})' ;;
     es_nodes)              echo 'sum(elasticsearch_cluster_health_number_of_nodes{cluster="elastic"})' ;;
     es_queue)              echo 'sum(elasticsearch_thread_pool_queue_count{cluster="elastic"})' ;;
-    es_pending)            echo 'sum(elasticsearch_cluster_health_number_of_pending_tasks{cluster="elastic"})' ;;
-    goldpinger_unhealthy)  echo 'sum(goldpinger_nodes_health_total{status="unhealthy"})' ;;
+    es_pending)           echo 'sum(elasticsearch_cluster_health_number_of_pending_tasks{cluster="elastic"})' ;;
+    es_docs_load)         echo 'sum(elasticsearch_indices_docs_primary{cluster="elastic",index="load"})' ;;
+    es_index_ms)         echo "1000 * sum(rate(elasticsearch_indices_indexing_index_time_seconds_total{cluster=\"elastic\"}[${RATE}])) / clamp_min(sum(rate(elasticsearch_indices_indexing_index_total{cluster=\"elastic\"}[${RATE}])), 1)" ;;
+    es_search_ms)         echo "1000 * sum(rate(elasticsearch_indices_search_query_time_seconds{cluster=\"elastic\"}[${RATE}])) / clamp_min(sum(rate(elasticsearch_indices_search_query_total{cluster=\"elastic\"}[${RATE}])), 1)" ;;
+    goldpinger_unhealthy) echo 'sum(goldpinger_nodes_health_total{status="unhealthy"})' ;;
     cilium_max_s)          echo 'max(cilium_node_connectivity_latency_seconds)' ;;
     *) return 1 ;;
   esac
@@ -55,6 +59,9 @@ dashboard_panel() {
     es_nodes)             echo "elasticsearch-cluster|elasticsearch-cluster|number of nodes" ;;
     es_queue)             echo "elasticsearch-cluster|elasticsearch-cluster|thread pool: в очереди (по пулам indexing/search)" ;;
     es_pending)           echo "elasticsearch-cluster|elasticsearch-cluster|pending tasks (master queue)" ;;
+    es_docs_load)         echo "elasticsearch-cluster|elasticsearch-cluster|documents (всего первичных)" ;;
+    es_index_ms)          echo "elasticsearch-cluster|elasticsearch-cluster|indexing время (ms/операцию)" ;;
+    es_search_ms)         echo "elasticsearch-cluster|elasticsearch-cluster|search: query + fetch время (ms/операцию)" ;;
     goldpinger_unhealthy) echo "goldpinger|goldpinger|healthy / unhealthy узлов" ;;
     cilium_max_s)         echo "cilium-node-latency|Cilium Node Connectivity Latency|Top 10 per-nodes Cilium ICMP Latency" ;;
     *) return 1 ;;
@@ -62,23 +69,13 @@ dashboard_panel() {
 }
 
 # --- какие метрики показывать для события (и в тексте, и на графике) ---
-# chaos: по шагу; sg: по действию.
+# Единый набор на любое событие (chaos и SG): любая метрика, которую AI может
+# упомянуть в «Выводе», обязана присутствовать здесь — тогда ссылки на дашборд
+# и график гарантированно покрывают текст.
 effect_metrics() {
-  local kind="$1" scope="$2" action="$3"
-  if [ "$kind" = chaos ]; then
-    case "$scope" in
-      pod-kill) echo "es_unassigned es_health_red es_queue es_pending" ;;
-      loss)     echo "bulk_p99_s search_p99_s" ;;
-      delay)    echo "bulk_p99_s search_p99_s" ;;
-      isolate)  echo "bulk_err_pct search_err_pct goldpinger_unhealthy cilium_max_s" ;;
-    esac
-  else
-    case "$action" in
-      isolate) echo "bulk_err_pct search_err_pct bulk_ok_rps search_ok_rps" ;;
-      restore) echo "search_err_pct bulk_ok_rps goldpinger_unhealthy cilium_max_s" ;;
-      *)       echo "bulk_err_pct bulk_ok_rps" ;;
-    esac
-  fi
+  echo "bulk_err_pct search_err_pct bulk_ok_rps search_ok_rps bulk_p99_s search_p99_s \
+es_unassigned es_health_red es_nodes es_queue es_pending es_docs_load es_index_ms es_search_ms \
+goldpinger_unhealthy cilium_max_s"
 }
 
 epoch() { date -u -d "$1" +%s; }
@@ -150,14 +147,17 @@ label_for() {
   echo "## Методика"
   echo
   echo "Скрипт \`scripts/collect-chaos-report.sh\` забирает из Grafana аннотации прогона, классифицирует их на"
-  echo "\`chaos\` (pod-kill/loss/delay/isolate) и \`sg\` (isolate/restore/verify по node group), для каждой"
+  echo "\`chaos\` (pod-kill/loss/delay/isolate) и \`sg\` (isolate/restore по node group), для каждой"
   echo "запрашивает в VictoriaMetrics метрики эффекта и считает \`pre\`-окно (равное событию, непосредственно перед ним)"
   echo "и \`event\`-окно. Порог «существенное изменение» не задан — значение трактуется по форме кривой, как в README."
   echo
   echo "Колонка **Дашборд → панель** указывает, в каком дашборде и на какой панели видна метрика события;"
   echo "ссылка на дашборд открывается за окно \`pre + event\`. Колонка **График** — ссылка на Grafana Explore"
-  echo "(datasource \`$DS_UID\`) с теми же метриками за то же окно. Колонка **Вывод** и раздел «Ключевые находки»"
-  echo "дописывает AI по \`analysis.tsv\` и графикам."
+  echo "(datasource \`$DS_UID\`) с теми же метриками за то же окно. Оба набора метрик задаёт \`effect_metrics\`"
+  echo "и они совпадают по построению. \`Вывод\` и раздел «Ключевые находки» дописывает AI по \`analysis.tsv\` и"
+  echo "графикам, но **называет только те метрики, что входят в набор события** — иначе упоминание останется"
+  echo "без ссылки. Если нужного показателя нет среди метрик события — сначала добавить его в \`effect_metrics\`,"
+  echo "\`expr_of\` и \`dashboard_panel\`, затем ссылаться в тексте."
   echo
   echo "> Оговорка: baseline ошибок у loadgen обычно нулевой, рост с нуля даёт \`inf%\`. Низкоуровневые метрики ES"
   echo "> (\`es_nodes\`, \`es_docs_load\`) дискретны и в коротких SG-окнах дают артефакты — читать как «данных мало»."

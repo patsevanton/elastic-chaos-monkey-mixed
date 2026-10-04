@@ -32,9 +32,18 @@ restore_ng() {
   "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: restore SG $ng end" sg isolate "$ZONE" "$ng" end
 }
 
-restore_ng "$ELASTIC_MASTER_NG" "$ELASTIC_MASTER_SG"
-restore_ng "$ELASTIC_DATA_NG" "$ELASTIC_DATA_SG"
-restore_ng "$APP_NG" "$APP_SG"
+pids=()
+restore_ng "$ELASTIC_MASTER_NG" "$ELASTIC_MASTER_SG" & pids+=("$!")
+restore_ng "$ELASTIC_DATA_NG" "$ELASTIC_DATA_SG" & pids+=("$!")
+restore_ng "$APP_NG" "$APP_SG" & pids+=("$!")
+fail=0
+for p in "${pids[@]}"; do
+  if ! wait "$p"; then fail=1; fi
+done
+if [ "$fail" -ne 0 ]; then
+  echo "один или несколько node-group update не удались" >&2
+  exit 1
+fi
 yc load-balancer network-load-balancer enable-zones --id "$NLB_TRAEFIK_ID" --zones "$ZONE"
 yc load-balancer network-load-balancer enable-zones --id "$NLB_VMINSERT_ID" --zones "$ZONE"
 rm -f "$STATE_FILE"

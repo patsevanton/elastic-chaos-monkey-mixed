@@ -128,7 +128,7 @@ ECK operator и Chaos Mesh controller: по 3 реплики в своём кл�
 
 SG переключается только CLI (`isolate` / `restore`), не `terraform apply`. У node group, которые изолируются, `lifecycle.ignore_changes` на `security_group_ids`. Контракт — [INFRASTRUCTURE.md](../../../INFRASTRUCTURE.md).
 
-Перед первым прогоном на кластере — `./scripts/verify-ng-isolation-sg.sh` для каждой изолируемой node group (`elastic-master-*`, `elastic-data-*`, `app-*`) в её kubectl-контексте. При `VERDICT: RECREATE` isolate/restore не использовать.
+`yc managed-kubernetes node-group update` меняет security group на живой VM, не пересоздавая узел (hot-replace), поэтому отдельно проверять пересоздание не нужно.
 
 Стоп-кран: остановить приложение, restore изолированной зоны, снять Chaos CR. Автоabort по SLO нет.
 

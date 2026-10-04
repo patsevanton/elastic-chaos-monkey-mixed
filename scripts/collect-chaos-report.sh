@@ -58,7 +58,6 @@ while IFS=$'\t' read -r _id epoch text tags; do
     [ -z "$ng" ] && continue
     action=isolate
     case "$text" in *restore*) action=restore ;; esac
-    case " $tags " in *" verify "*) action=verify ;; esac
     printf '%s\t%s\t%s\t%s\t%s\n' "$epoch" "$zone" "$ng" "$action" "$phase" >> "$OUT_DIR/sg.tsv"
   fi
 done < "$OUT_DIR/annotations.tsv"

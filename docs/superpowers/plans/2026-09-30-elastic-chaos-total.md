@@ -58,7 +58,7 @@ Go и chart: `loadgen/` — `go.mod`, `main.go`, `main_test.go`, `Dockerfile`, `
 
 Манифесты скрейпа, которые умеют чарты, задаются через values: Traefik (`metrics.prometheus.serviceMonitor.enabled`), goldpinger (`serviceMonitor.enabled`), prometheus-elasticsearch-exporter (`serviceMonitor.enabled`). loadgen остаётся `VMServiceScrape` в шаблоне чарта. Стандартные Prometheus CRD ставит чарт `prometheus-community/prometheus-operator-crds` 32.0.1; `ServiceMonitor` конвертирует VM-оператор.
 
-Скрипты: `scripts/apply-eck.sh`, `scripts/apply-cnpg.sh`, `scripts/isolate-zone.sh`, `scripts/restore-zone.sh`, `scripts/chaos-run.sh`, `scripts/verify-ng-isolation-sg.sh`, `scripts/annotate-grafana.sh`, `scripts/check-chaos.sh`.
+Скрипты: `scripts/apply-eck.sh`, `scripts/apply-cnpg.sh`, `scripts/isolate-zone.sh`, `scripts/restore-zone.sh`, `scripts/chaos-run.sh`, `scripts/annotate-grafana.sh`, `scripts/check-chaos.sh`.
 
 Дашборды: `dashboards/cilium-node-latency.json`, `elastic-loadgen-app.json`, `elasticsearch-cluster.json`, `goldpinger.json`.
 
@@ -88,16 +88,7 @@ Go и chart: `loadgen/` — `go.mod`, `main.go`, `main_test.go`, `Dockerfile`, `
 
 ## Прогон
 
-Перед первым прогоном на кластере — для каждой изолируемой node group в её контексте:
-
-```bash
-./scripts/verify-ng-isolation-sg.sh "$(terraform output -raw zone_isolation_sg_id)" <zone> <node-group>
-```
-
-Группы: `elastic-master-a|b|d`, `elastic-data-a|b|d` — контекст `elastic`; `app-a|b|d` — контекст `app`.
-
-- `VERDICT: HOT-REPLACE` — `node-group update` меняет SG на живой VM, isolate/restore работают как есть.
-- `VERDICT: RECREATE` — managed k8s пересоздаёт узел. **Остановиться**, isolate/restore не использовать, записать факт в отчёт и предложить варианты: A — переписать isolate/restore на `yc compute instance update-network-interface`; B — пропустить шаг изоляции, прогнав pod-kill/loss/delay. Автономно ни один вариант не применять.
+`yc managed-kubernetes node-group update` меняет security group на живой VM, не пересоздавая узел (hot-replace), поэтому отдельно проверять пересоздание не нужно. Изолируемые группы: `elastic-master-a|b|d`, `elastic-data-a|b|d` — контекст `elastic`; `app-a|b|d` — контекст `app`. Применение SG к трём node group зоны идёт параллельно (три `yc node-group update` в фоне, скрипты ждут все три).
 
 ```bash
 ./scripts/chaos-run.sh
