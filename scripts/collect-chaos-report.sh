@@ -27,7 +27,7 @@ jq -r '.[] | [.id, (.time / 1000 | floor), .text, (.tags | join(" "))] | @tsv' \
   "$OUT_DIR/annotations.json" > "$OUT_DIR/annotations.tsv"
 
 # --- классификация: chaos-шаги и SG-смены ---
-: > "$OUT_DIR/chaos.tsv"   # epoch zone step phase
+: > "$OUT_DIR/chaos.tsv"   # epoch zone step target phase
 : > "$OUT_DIR/sg.tsv"      # epoch zone ng action phase
 while IFS=$'\t' read -r _id epoch text tags; do
   [ -z "${epoch:-}" ] && continue
@@ -50,7 +50,9 @@ while IFS=$'\t' read -r _id epoch text tags; do
   if [ "$kind" = chaos ]; then
     step="$(printf '%s\n' $tags | grep -m1 -E '^(pod-kill|loss|delay|isolate)$' || true)"
     [ -z "$step" ] && continue
-    printf '%s\t%s\t%s\t%s\n' "$epoch" "$zone" "$step" "$phase" >> "$OUT_DIR/chaos.tsv"
+    target="$(printf '%s\n' $tags | sed -n 's/^target-//p' | head -n1)"
+    [ -z "$target" ] && target=x
+    printf '%s\t%s\t%s\t%s\t%s\n' "$epoch" "$zone" "$step" "$target" "$phase" >> "$OUT_DIR/chaos.tsv"
   else
     ng="$(printf '%s\n' $tags | grep -m1 -E '^(elastic-master|elastic-data|app)-[abd]$' || true)"
     [ -z "$ng" ] && continue
@@ -63,25 +65,16 @@ done < "$OUT_DIR/annotations.tsv"
 sort -n -k1,1 "$OUT_DIR/chaos.tsv" > "$OUT_DIR/chaos.sorted"
 sort -n -k1,1 "$OUT_DIR/sg.tsv" > "$OUT_DIR/sg.sorted"
 
-# --- окна chaos: start -> следующий start другой стадии в той же зоне ---
+# --- окна chaos: start -> end по (zone, step, target) ---
+# Строки chaos.sorted: epoch zone step target phase.
 awk -F'\t' '
-  { row[NR] = $0 }
-  $4 == "start" { ns++; s[ns] = $0 }
-  $4 == "end" { k = $2 SUBSEP $3; if ($1 + 0 > le[k]) le[k] = $1 }
+  $5 == "start" { k = $2 SUBSEP $3 SUBSEP $4; sc[k]++; st[k, sc[k]] = $1 }
+  $5 == "end"   { k = $2 SUBSEP $3 SUBSEP $4; ec[k]++; en[k, ec[k]] = $1 }
   END {
-    for (i = 1; i <= ns; i++) {
-      split(s[i], a, "\t"); key = a[2] SUBSEP a[3]
-      if (!(key in fs) || a[1] + 0 < fs[key]) fs[key] = a[1] + 0
-    }
-    for (key in fs) {
-      split(key, b, SUBSEP); zone = b[1]; step = b[2]; wend = 0
-      for (i = 1; i <= ns; i++) {
-        split(s[i], a, "\t")
-        if (a[2] == zone && a[3] != step && a[1] + 0 > fs[key] && (wend == 0 || a[1] + 0 < wend)) wend = a[1] + 0
-      }
-      if (wend == 0) wend = le[key]
-      if (wend == 0) wend = fs[key]
-      printf "%s\t%s\t%s\t%s\n", zone, step, fs[key], wend
+    for (k in sc) {
+      n = sc[k]; if (ec[k] < n) n = ec[k]
+      split(k, b, SUBSEP)
+      for (i = 1; i <= n; i++) printf "%s\t%s\t%s\t%s\t%s\n", b[1], b[2], b[3], st[k, i], en[k, i]
     }
   }
 ' "$OUT_DIR/chaos.sorted" > "$OUT_DIR/chaos_windows.tsv"
@@ -196,9 +189,19 @@ run_event() {
   echo "собрано: $name [$kind $zone $scope${action:+ $action}] $(iso "$start") .. $(iso "$end")"
 }
 
-while IFS=$'\t' read -r zone step start end; do
+target_words() {
+  case "$1" in
+    elastic-master) echo "elastic master" ;;
+    elastic-data)   echo "elastic data" ;;
+    loadgen)        echo "loadgen" ;;
+    *)              echo "$1" ;;
+  esac
+}
+while IFS=$'\t' read -r zone step target start end; do
   [ -z "${zone:-}" ] && continue
-  run_event chaos "$zone" "$step" "" "$start" "$end" "chaos $zone: $step"
+  tw="$(target_words "$target")"
+  short="zone-${zone##*-}"
+  run_event chaos "$zone" "$step $tw" "" "$start" "$end" "$step $tw $short"
 done < "$OUT_DIR/chaos_windows.tsv"
 
 while IFS=$'\t' read -r zone ng action start end; do

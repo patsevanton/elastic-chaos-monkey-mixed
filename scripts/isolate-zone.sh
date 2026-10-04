@@ -31,23 +31,6 @@ MASTER_SUBNETS="$(subnets_of "$MASTER_JSON")"
 DATA_SUBNETS="$(subnets_of "$DATA_JSON")"
 APP_SUBNETS="$(subnets_of "$APP_JSON")"
 
-nlb_id_by_ip() {
-  yc load-balancer network-load-balancer list --format json \
-    | jq -r --arg ip "$1" '[.[] | select(any(.listeners[]?; .address == $ip))][0].id // empty'
-}
-TRAEFIK_IP="$(kubectl --context elastic -n traefik get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
-VMINSERT_IP="$(kubectl --context app -n vmks get svc vminsert-nlb -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
-TRAEFIK_APP_IP="$(kubectl --context app -n traefik get svc traefik -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
-TRAEFIK_APP_PUBLIC_IP="$(kubectl --context app -n traefik get svc traefik-public -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
-NLB_TRAEFIK_ID="$(nlb_id_by_ip "$TRAEFIK_IP")"
-NLB_VMINSERT_ID="$(nlb_id_by_ip "$VMINSERT_IP")"
-NLB_APP_TRAEFIK_ID="$(nlb_id_by_ip "$TRAEFIK_APP_IP")"
-NLB_APP_PUBLIC_ID="$(nlb_id_by_ip "$TRAEFIK_APP_PUBLIC_IP")"
-if [ -z "$NLB_TRAEFIK_ID" ] || [ -z "$NLB_VMINSERT_ID" ] \
-   || [ -z "$NLB_APP_TRAEFIK_ID" ] || [ -z "$NLB_APP_PUBLIC_ID" ]; then
-  echo "не нашли NLB traefik=$NLB_TRAEFIK_ID vminsert=$NLB_VMINSERT_ID app-traefik=$NLB_APP_TRAEFIK_ID app-public=$NLB_APP_PUBLIC_ID" >&2
-  exit 1
-fi
 SG_ID="$(terraform output -raw zone_isolation_sg_id)"
 
 cat > "$STATE_FILE" <<EOF
@@ -58,10 +41,6 @@ APP_NG=$APP_NG
 ELASTIC_MASTER_SG=$MASTER_SG
 ELASTIC_DATA_SG=$DATA_SG
 APP_SG=$APP_SG
-NLB_TRAEFIK_ID=$NLB_TRAEFIK_ID
-NLB_VMINSERT_ID=$NLB_VMINSERT_ID
-NLB_APP_TRAEFIK_ID=$NLB_APP_TRAEFIK_ID
-NLB_APP_PUBLIC_ID=$NLB_APP_PUBLIC_ID
 EOF
 
 apply_isolation_sg() {
@@ -71,30 +50,7 @@ apply_isolation_sg() {
   "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: isolate SG $ng end" sg isolate "$ZONE" "$ng" end
 }
 
-# disable-zones на все NLB до применения SG: иначе внешний NLB кластера app
-# продолжает слать трафик в зону, которую вот-вот изолируем, и запросы к
-# Grafana по публичному IP виснут (пустой SG дропает пакеты). Правило
-# «не чаще раза в 2 минуты» действует на один NLB, поэтому вызовы для разных
-# NLB идут параллельно.
-disable_zone() {
-  local id="$1"
-  yc load-balancer network-load-balancer disable-zones --id "$id" --zones "$ZONE"
-}
-echo "isolate $ZONE sg=$SG_ID ng=$MASTER_NG,$DATA_NG,$APP_NG nlb=$NLB_TRAEFIK_ID,$NLB_VMINSERT_ID,$NLB_APP_TRAEFIK_ID,$NLB_APP_PUBLIC_ID"
-nlb_pids=()
-disable_zone "$NLB_TRAEFIK_ID" & nlb_pids+=("$!")
-disable_zone "$NLB_VMINSERT_ID" & nlb_pids+=("$!")
-disable_zone "$NLB_APP_TRAEFIK_ID" & nlb_pids+=("$!")
-disable_zone "$NLB_APP_PUBLIC_ID" & nlb_pids+=("$!")
-nlb_fail=0
-for p in "${nlb_pids[@]}"; do
-  if ! wait "$p"; then nlb_fail=1; fi
-done
-if [ "$nlb_fail" -ne 0 ]; then
-  echo "disable-zones на одном или нескольких NLB не удался" >&2
-  exit 1
-fi
-
+echo "isolate $ZONE sg=$SG_ID ng=$MASTER_NG,$DATA_NG,$APP_NG"
 pids=()
 apply_isolation_sg "$MASTER_NG" "$MASTER_SUBNETS" "$SG_ID" & pids+=("$!")
 apply_isolation_sg "$DATA_NG" "$DATA_SUBNETS" "$SG_ID" & pids+=("$!")

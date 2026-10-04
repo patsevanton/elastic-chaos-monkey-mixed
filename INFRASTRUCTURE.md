@@ -28,15 +28,13 @@ Chart **41.6.0**, 3 реплики. На каждом кластере два Se
 
 Пустой SG `zone-isolation`. `lifecycle.ignore_changes` на `security_group_ids` у всех девяти node group. Переключение только `./scripts/isolate-zone.sh` / `./scripts/restore-zone.sh`. State: `.state/zone-isolate.env`.
 
-Isolate ставит пустой SG на `elastic-master-*`, `elastic-data-*` и `app-*` этой зоны. `disable-zones` делается на всех NLB, по которым ходит трафик затронутых зон: Traefik кластера `elastic` (путь app → ES), `vminsert` (remote write из es-кластера) и оба NLB Traefik кластера `app` — внутренний (`web`) и внешний (`public`), иначе внешний NLB `app` продолжает слать браузерный трафик (Grafana, Chaos Dashboard) в изолированную зону, и запросы виснут. VM остаётся `RUNNING`.
+Isolate ставит пустой SG на `elastic-master-*`, `elastic-data-*` и `app-*` этой зоны. `disable-zones` пока не используется: изоляция — только пустой SG, зона остаётся в балансировщиках, а трафик из неё снимает health-check NLB по нодам. VM остаётся `RUNNING`.
 
-`disable-zones` на всех NLB выполняется параллельно и до применения SG: правило «не чаще раза в 2 минуты» действует на один NLB, а разные NLB друг от друга не зависят.
-
-Restore возвращает сохранённые SG и делает `enable-zones` на все четыре NLB.
+Restore возвращает сохранённые SG. `enable-zones` не вызывается, так как `disable-zones` не вызывается.
 
 `yc managed-kubernetes node-group update` меняет security group на живой VM, не пересоздавая узел (hot-replace), поэтому отдельно проверять пересоздание не нужно. Применение SG к трём node group зоны идёт параллельно: три `yc node-group update` в фоне, скрипты ждут все три.
 
-`disable-zones` не чаще раза в 2 минуты на один NLB.
+`disable-zones` не используется: изоляция зоны — только пустой SG, а трафик из зоны снимает автоматический health-check NLB по нодам. Если `disable-zones` понадобится вернуть, правило «не чаще раза в 2 минуты» действует на один NLB.
 
 ## Grafana и CloudNativePG
 

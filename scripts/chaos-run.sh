@@ -36,9 +36,19 @@ preflight_state() {
 }
 preflight_state
 
+# На каждый chaos-шаг — отдельная пара start/end на каждую цель:
+# elastic master (ns elastic), elastic data (ns elastic), loadgen (ns load).
+# Текст: "<step> <phase> <цель> zone-a", тег цели — target-<slug>.
+CHAOS_TARGETS=("elastic master:elastic-master" "elastic data:elastic-data" "loadgen:loadgen")
+
 annotate() {
   local zone="$1" step="$2" phase="$3"
-  "$ROOT/scripts/annotate-grafana.sh" "zone $zone: $step $phase" chaos "$step" "$zone" "$phase"
+  local short="zone-${zone##*-}"
+  local t words slug
+  for t in "${CHAOS_TARGETS[@]}"; do
+    words="${t%%:*}"; slug="${t##*:}"
+    "$ROOT/scripts/annotate-grafana.sh" "$step $phase $words $short" chaos "$step" "$zone" "$phase" "target-$slug"
+  done
 }
 
 apply_zone() {

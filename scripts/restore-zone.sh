@@ -7,10 +7,10 @@ if [ ! -f "$STATE_FILE" ]; then
   echo "нет $STATE_FILE" >&2
   exit 1
 fi
-ZONE="" ELASTIC_MASTER_NG="" ELASTIC_DATA_NG="" APP_NG="" ELASTIC_MASTER_SG="" ELASTIC_DATA_SG="" APP_SG="" NLB_TRAEFIK_ID="" NLB_VMINSERT_ID="" NLB_APP_TRAEFIK_ID="" NLB_APP_PUBLIC_ID=""
+ZONE="" ELASTIC_MASTER_NG="" ELASTIC_DATA_NG="" APP_NG="" ELASTIC_MASTER_SG="" ELASTIC_DATA_SG="" APP_SG=""
 # shellcheck disable=SC1090
 source "$STATE_FILE"
-if [ -z "$ZONE" ] || [ -z "$ELASTIC_MASTER_NG" ] || [ -z "$ELASTIC_DATA_NG" ] || [ -z "$APP_NG" ] || [ -z "$NLB_TRAEFIK_ID" ] || [ -z "$NLB_VMINSERT_ID" ]; then
+if [ -z "$ZONE" ] || [ -z "$ELASTIC_MASTER_NG" ] || [ -z "$ELASTIC_DATA_NG" ] || [ -z "$APP_NG" ]; then
   echo "state неполный" >&2
   exit 1
 fi
@@ -44,27 +44,5 @@ if [ "$fail" -ne 0 ]; then
   echo "один или несколько node-group update не удались" >&2
   exit 1
 fi
-enable_zone() {
-  local id="$1" out rc
-  out="$(yc load-balancer network-load-balancer enable-zones --id "$id" --zones "$ZONE" 2>&1)" && rc=0 || rc=$?
-  if [ "$rc" -ne 0 ]; then
-    # yc 1.32.0: на уже включённой зоне enable-zones — no-op, но CLI падает с
-    # "unexpected response type: google.protobuf.Empty". Это не сбой действия,
-    # поэтому не роняем restore (иначе state не будет удалён).
-    if grep -q "unexpected response type: google.protobuf.Empty" <<<"$out"; then
-      echo "enable-zones $id: зона $ZONE уже включена (no-op yc)" >&2
-    else
-      echo "$out" >&2
-      return 1
-    fi
-  fi
-}
-
-enable_zone "$NLB_TRAEFIK_ID"
-enable_zone "$NLB_VMINSERT_ID"
-# State от прошлых прогонов (до добавления app-NLB) не содержит этих ключей —
-# включаем зону только для тех NLB, что реально изолировались.
-if [ -n "$NLB_APP_TRAEFIK_ID" ]; then enable_zone "$NLB_APP_TRAEFIK_ID"; fi
-if [ -n "$NLB_APP_PUBLIC_ID" ]; then enable_zone "$NLB_APP_PUBLIC_ID"; fi
 rm -f "$STATE_FILE"
 echo "zone $ZONE restored"
