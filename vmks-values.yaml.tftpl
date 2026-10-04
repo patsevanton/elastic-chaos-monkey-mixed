@@ -3,8 +3,6 @@ grafana:
   deploymentStrategy:
     type: Recreate
     rollingUpdate: null
-  plugins:
-    - chaosmeshorg-datasource@3.0.0
   resources:
     requests:
       cpu: 100m
@@ -27,13 +25,7 @@ grafana:
       name: grafana
       user: app
       ssl_mode: require
-    plugins:
-      allow_loading_unsigned_plugins: chaosmeshorg-datasource
   envValueFrom:
-    CHAOS_MESH_TOKEN:
-      secretKeyRef:
-        name: chaos-mesh-admin-token
-        key: token
     GF_DATABASE_PASSWORD:
       secretKeyRef:
         name: pg-grafana-app
@@ -107,15 +99,6 @@ defaultDatasources:
           httpMethod: POST
           queryTimeout: 300s
           timeInterval: 30s
-  extra:
-    - name: Chaos Mesh
-      type: chaosmeshorg-datasource
-      access: proxy
-      url: http://chaos-dashboard.chaos-mesh.svc.cluster.local:2333
-      jsonData:
-        httpHeaderName1: Authorization
-      secureJsonData:
-        httpHeaderValue1: 'Bearer $CHAOS_MESH_TOKEN'
 
 defaultRules:
   groups:

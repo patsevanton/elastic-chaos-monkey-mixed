@@ -5,10 +5,10 @@ cd "$ROOT"
 
 GRAFANA_URL="${GRAFANA_URL:-$(terraform output -raw grafana_url)}"
 GRAFANA_USER=admin
-GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-$(kubectl --context app -n vmks get secret vmks-grafana -o jsonpath='{.data.admin-password}' | base64 -d)}"
-DS_UID="${DS_UID:-VictoriaMetrics}"
-STEP_QUERY="${STEP_QUERY:-15}"
-RATE="${RATE:-1m}"
+GRAFANA_PASSWORD="$(kubectl --context app -n vmks get secret vmks-grafana -o jsonpath='{.data.admin-password}' | base64 -d)"
+DS_UID=VictoriaMetrics
+STEP_QUERY=15
+RATE=1m
 
 ZONES="${ZONES:-ru-central1-a}"
 RUN_DATE="${RUN_DATE:-$(date +%F)}"

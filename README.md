@@ -57,7 +57,7 @@ Elasticsearch разнесён по ролям: узлы `master` держат �
       → Elasticsearch ClusterIP elastic-es-http :9200
 ```
 
-Прямого балансировщика на Elasticsearch нет — весь трафик приложения идёт через Traefik `elastic`. Kibana в путь нагрузки не входит. Снаружи Elasticsearch не публикуется: наружу открыты только Kibana, Grafana и дашборды Chaos Mesh, каждое через свой публичный NLB.
+Прямого балансировщика на Elasticsearch нет — весь трафик приложения идёт через Traefik `elastic`. Kibana в путь нагрузки не входит. Снаружи Elasticsearch не публикуется: наружу открыты только Kibana и Grafana, каждая через свой публичный NLB.
 
 ### Наблюдаемость
 

@@ -30,12 +30,10 @@ helm --kube-context elastic upgrade --install prometheus-operator-crds \
 
 Оба контекста, namespace `vmks`, chart 0.92.1. `app` — полный стек и Grafana (`vmks-values.yaml`). `elastic` — тот же chart без Grafana (`vmks-elastic-values.yaml`): CRD оператора для `VMAgent` и `VMServiceScrape`.
 
-Перед `helm` в контексте `app` создать namespace, RBAC, дождаться токена (нужен Grafana как Chaos Mesh datasource) и поднять CNPG (Grafana хранит состояние в его PostgreSQL — до `helm` должны существовать оператор, кластер `pg-grafana` и секрет `pg-grafana-app`):
+Перед `helm` в контексте `app` создать namespace и поднять CNPG (Grafana хранит состояние в его PostgreSQL — до `helm` должны существовать оператор, кластер `pg-grafana` и секрет `pg-grafana-app`):
 
 ```bash
 kubectl --context app create namespace vmks --dry-run=client -o yaml | kubectl --context app apply -f -
-kubectl --context app apply -f manifests/chaos-mesh/rbac.yaml
-kubectl --context app -n vmks wait --for=jsonpath='{.data.token}' secret/chaos-mesh-admin-token --timeout=60s
 ./scripts/apply-cnpg.sh
 ```
 

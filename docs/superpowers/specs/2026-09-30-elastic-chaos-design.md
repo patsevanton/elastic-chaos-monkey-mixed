@@ -19,7 +19,7 @@
 
 Критерии: search жив, index жив, нет потери документов, которые bulk принял до сбоя. Порога «жив / не жив» по error-rate нет: печатаем процент ошибок приложения. Пока зона изолирована, кластер **yellow** (копия шарда этой зоны не аллоцируется на живые зоны); после restore — **green**, копия садится сама.
 
-Доступ с ноутбука: k8s API обоих кластеров — внешние endpoint master; Grafana, Kibana и Chaos Dashboard — публичные IP внешних NLB Traefik.
+Доступ с ноутбука: k8s API обоих кластеров — внешние endpoint master; Grafana и Kibana — публичные IP внешних NLB Traefik.
 
 ## Вне скоупа
 
@@ -97,7 +97,7 @@ app-под → internal NLB Traefik (es-кластер) → Elasticsearch
 
 Скрейп-конфигурация задаётся стандартными `ServiceMonitor` (`monitoring.coreos.com/v1`) — для экспортёра, Traefik и goldpinger. CRD ставит чарт `prometheus-community/prometheus-operator-crds` **32.0.1** в оба кластера; `ServiceMonitor` собирает конвертер VM-оператора (сам prometheus-operator не ставится). `manifests/exporter/chaos-mesh-scrape.yaml`, `cilium-scrape.yaml` и loadgen в своём чарте остаются `VMServiceScrape`.
 
-В es-кластере свой Traefik: chart **41.6.0**, 3 реплики. Internal NLB (`10.0.1.33`) — путь loadgen → Elasticsearch. Публичный NLB — Kibana и Chaos Dashboard с ноутбука. Kibana ×3, Ingress без basic auth. Grafana с ноутбука — публичный NLB Traefik `app`, не `10.0.1.34`.
+В es-кластере свой Traefik: chart **41.6.0**, 3 реплики. Internal NLB (`10.0.1.33`) — путь loadgen → Elasticsearch. Публичный NLB — Kibana с ноутбука. Kibana ×3, Ingress без basic auth. Grafana с ноутбука — публичный NLB Traefik `app`, не `10.0.1.34`.
 
 ECK operator и Chaos Mesh controller: по 3 реплики в своём кластере. Chaos Mesh — в обоих кластерах.
 
@@ -136,7 +136,7 @@ SG переключается только CLI (`isolate` / `restore`), не `te
 
 ```
 Ноутбук --интернет--> публичные IP внешних NLB Traefik и внешние endpoint API master
-  → Grafana, Kibana, Chaos Dashboard
+  → Grafana, Kibana
   → kubectl API обоих кластеров
 
 app-под --VPC--> internal NLB Traefik es --> Elasticsearch ClusterIP :9200

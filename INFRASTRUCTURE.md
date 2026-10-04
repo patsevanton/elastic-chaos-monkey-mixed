@@ -12,7 +12,7 @@ Reserved internal IP в подсети `a`: Traefik `elastic` `10.0.1.33`, Traef
 
 ## Публичный доступ
 
-Браузер → внешний NLB Traefik → entrypoint `public` → Ingress. `app`: Grafana и Chaos Dashboard, `grafana.<IP>.sslip.io` и `chaos-dashboard.<IP>.sslip.io`. `elastic`: Kibana и Chaos Dashboard, `kibana.<IP>.sslip.io` и `chaos-dashboard.<IP>.sslip.io`. Elasticsearch снаружи не публикуется: его Ingress на entrypoint `web` внутреннего NLB.
+Браузер → внешний NLB Traefik → entrypoint `public` → Ingress. `app`: Grafana, `grafana.<IP>.sslip.io`. `elastic`: Kibana, `kibana.<IP>.sslip.io`. Elasticsearch снаружи не публикуется: его Ingress на entrypoint `web` внутреннего NLB.
 
 ## Traefik
 

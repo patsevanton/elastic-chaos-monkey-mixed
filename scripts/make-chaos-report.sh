@@ -13,11 +13,11 @@ cd "$ROOT"
 
 RUN_DATE="${RUN_DATE:-$(date +%F)}"
 OUT_DIR="${OUT_DIR:-$ROOT/.state/chaos-report-$RUN_DATE}"
-REPORT="${REPORT:-$ROOT/docs/chaos-report-$RUN_DATE.md}"
+REPORT="$ROOT/docs/chaos-report-$RUN_DATE.md"
 ZONES="${ZONES:-ru-central1-a}"
 GRAFANA_URL="${GRAFANA_URL:-$(terraform output -raw grafana_url 2>/dev/null || echo '')}"
-DS_UID="${DS_UID:-VictoriaMetrics}"
-RATE="${RATE:-1m}"
+DS_UID=VictoriaMetrics
+RATE=1m
 
 [ -f "$OUT_DIR/windows.tsv" ] || { echo "нет $OUT_DIR/windows.tsv — сначала collect-chaos-report.sh" >&2; exit 1; }
 
