@@ -71,27 +71,26 @@ hold() {
   sleep "$STEP"
 }
 
-for zone in ru-central1-a; do
-  echo "zone $zone pod-kill"
-  annotate "$zone" pod-kill start
-  pod_kill "$zone"
-  annotate "$zone" pod-kill end
-  quiet
-  echo "zone $zone loss"
-  annotate "$zone" loss start
-  hold "$zone" "$ROOT/manifests/chaos/network-loss.yaml" "$ROOT/manifests/chaos/network-loss-loadgen.yaml"
-  annotate "$zone" loss end
-  quiet
-  echo "zone $zone delay"
-  annotate "$zone" delay start
-  hold "$zone" "$ROOT/manifests/chaos/network-delay.yaml" "$ROOT/manifests/chaos/network-delay-loadgen.yaml"
-  annotate "$zone" delay end
-  quiet
-  echo "zone $zone isolate"
-  annotate "$zone" isolate start
-  "$ROOT/scripts/isolate-zone.sh" "$zone"
-  sleep "$STEP"
-  "$ROOT/scripts/restore-zone.sh"
-  annotate "$zone" isolate end
-  quiet
-done
+zone=ru-central1-a
+echo "zone $zone pod-kill"
+annotate "$zone" pod-kill start
+pod_kill "$zone"
+annotate "$zone" pod-kill end
+quiet
+echo "zone $zone loss"
+annotate "$zone" loss start
+hold "$zone" "$ROOT/manifests/chaos/network-loss.yaml" "$ROOT/manifests/chaos/network-loss-loadgen.yaml"
+annotate "$zone" loss end
+quiet
+echo "zone $zone delay"
+annotate "$zone" delay start
+hold "$zone" "$ROOT/manifests/chaos/network-delay.yaml" "$ROOT/manifests/chaos/network-delay-loadgen.yaml"
+annotate "$zone" delay end
+quiet
+echo "zone $zone isolate"
+annotate "$zone" isolate start
+"$ROOT/scripts/isolate-zone.sh" "$zone"
+sleep "$STEP"
+"$ROOT/scripts/restore-zone.sh"
+annotate "$zone" isolate end
+quiet

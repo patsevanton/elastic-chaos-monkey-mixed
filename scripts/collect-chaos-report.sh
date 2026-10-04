@@ -4,10 +4,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 GRAFANA_URL="${GRAFANA_URL:-$(terraform output -raw grafana_url)}"
-GRAFANA_USER="${GRAFANA_USER:-admin}"
-if [ -z "${GRAFANA_PASSWORD:-}" ]; then
-  GRAFANA_PASSWORD="$(kubectl --context app -n vmks get secret vmks-grafana -o jsonpath='{.data.admin-password}' | base64 -d)"
-fi
+GRAFANA_USER=admin
+GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-$(kubectl --context app -n vmks get secret vmks-grafana -o jsonpath='{.data.admin-password}' | base64 -d)}"
 DS_UID="${DS_UID:-VictoriaMetrics}"
 STEP_QUERY="${STEP_QUERY:-15}"
 RATE="${RATE:-1m}"
@@ -174,12 +172,10 @@ EVENT_N=0
 run_event() {
   local kind="$1" zone="$2" scope="$3" action="$4" start="$5" end="$6" text="$7"
   EVENT_N=$((EVENT_N + 1))
-  local idx
-  idx="$(printf '%s' "$EVENT_N")"
   local dur=$(( end - start )); [ "$dur" -lt 60 ] && dur=60
   local pre_start=$(( start - dur )) pre_end=$start
   local name
-  name="$(printf '%02d-%s-%s-%s-%s' "$idx" "$kind" "$zone" "$scope" "${action:-x}" | tr '/ ' '__')"
+  name="$(printf '%02d-%s-%s-%s-%s' "$EVENT_N" "$kind" "$zone" "$scope" "${action:-x}" | tr '/ ' '__')"
   local out="$OUT_DIR/$name.tsv"
   printf 'phase\tmetric\tts\tvalue\n' > "$out"
   local resp
@@ -194,7 +190,7 @@ run_event() {
     printf 'event\t%s\t%s\t%s\n' "$m" "$ts" "$val" >> "$out"
   done <<<"$resp"
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-    "$idx" "$kind" "$zone" "$scope" "${action:--}" "$(iso "$start")" "$(iso "$end")" "$(iso "$pre_start")" "$(iso "$pre_end")" \
+    "$EVENT_N" "$kind" "$zone" "$scope" "${action:--}" "$(iso "$start")" "$(iso "$end")" "$(iso "$pre_start")" "$(iso "$pre_end")" \
     >> "$OUT_DIR/windows.tsv"
   printf '%s\t%s\n' "$name" "$text" >> "$OUT_DIR/events.txt"
   echo "собрано: $name [$kind $zone $scope${action:+ $action}] $(iso "$start") .. $(iso "$end")"
