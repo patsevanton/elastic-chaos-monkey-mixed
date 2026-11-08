@@ -47,7 +47,9 @@ annotate() {
   local t words slug
   for t in "${CHAOS_TARGETS[@]}"; do
     words="${t%%:*}"; slug="${t##*:}"
-    "$ROOT/scripts/annotate-grafana.sh" "$step $phase $words $short" chaos "$step" "$zone" "$phase" "target-$slug"
+    # Сбой аннотации не должен прерывать уже выполненный шаг или откат.
+    "$ROOT/scripts/annotate-grafana.sh" "$step $phase $words $short" chaos "$step" "$zone" "$phase" "target-$slug" || \
+      echo "annotate: пропущено ($step $phase $slug)" >&2
   done
 }
 

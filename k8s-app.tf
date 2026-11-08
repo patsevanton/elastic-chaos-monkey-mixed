@@ -5,23 +5,19 @@ resource "yandex_kubernetes_cluster" "app" {
 
   master {
     version = "1.33"
-    regional {
-      region = "ru-central1"
+    master_location {
+      zone      = local.subnet_a_zone
+      subnet_id = local.subnet_a_id
+    }
 
-      location {
-        zone      = local.subnet_a_zone
-        subnet_id = local.subnet_a_id
-      }
+    master_location {
+      zone      = local.subnet_d_zone
+      subnet_id = local.subnet_d_id
+    }
 
-      location {
-        zone      = local.subnet_b_zone
-        subnet_id = local.subnet_b_id
-      }
-
-      location {
-        zone      = local.subnet_d_zone
-        subnet_id = local.subnet_d_id
-      }
+    master_location {
+      zone      = local.subnet_e_zone
+      subnet_id = local.subnet_e_id
     }
 
     public_ip = true
@@ -68,51 +64,6 @@ resource "yandex_kubernetes_node_group" "app_a" {
     network_interface {
       nat        = false
       subnet_ids = [local.subnet_a_id]
-    }
-
-    resources {
-      cores  = 4
-      memory = 16
-    }
-
-    boot_disk {
-      type = "network-hdd"
-      size = 64
-    }
-
-    scheduling_policy {
-      preemptible = true
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [instance_template[0].network_interface[0].security_group_ids]
-  }
-}
-
-resource "yandex_kubernetes_node_group" "app_b" {
-  name        = "app-b"
-  description = "Worker in ru-central1-b"
-  cluster_id  = yandex_kubernetes_cluster.app.id
-  version     = "1.33"
-
-  scale_policy {
-    fixed_scale {
-      size = 1
-    }
-  }
-
-  allocation_policy {
-    location { zone = local.subnet_b_zone }
-  }
-
-  instance_template {
-    platform_id = "standard-v3"
-    name        = "rc1b-app-{instance.short_id}"
-
-    network_interface {
-      nat        = false
-      subnet_ids = [local.subnet_b_id]
     }
 
     resources {

@@ -1,5 +1,5 @@
 grafana:
-  replicas: 3
+  replicas: 2
   deploymentStrategy:
     type: Recreate
     rollingUpdate: null
@@ -129,12 +129,12 @@ vmsingle:
 vmcluster:
   enabled: true
   spec:
-    replicationFactor: 3
+    replicationFactor: 2
     vmstorage:
       useDefaultResources: false
-      replicaCount: 3
+      replicaCount: 2
       podDisruptionBudget:
-        minAvailable: 2
+        minAvailable: 1
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone

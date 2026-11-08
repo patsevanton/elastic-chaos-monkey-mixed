@@ -38,23 +38,19 @@ resource "yandex_kubernetes_cluster" "elastic_chaos" {
 
   master {
     version = "1.33"
-    regional {
-      region = "ru-central1"
+    master_location {
+      zone      = local.subnet_a_zone
+      subnet_id = local.subnet_a_id
+    }
 
-      location {
-        zone      = local.subnet_a_zone
-        subnet_id = local.subnet_a_id
-      }
+    master_location {
+      zone      = local.subnet_d_zone
+      subnet_id = local.subnet_d_id
+    }
 
-      location {
-        zone      = local.subnet_b_zone
-        subnet_id = local.subnet_b_id
-      }
-
-      location {
-        zone      = local.subnet_d_zone
-        subnet_id = local.subnet_d_id
-      }
+    master_location {
+      zone      = local.subnet_e_zone
+      subnet_id = local.subnet_e_id
     }
 
     public_ip = true
@@ -100,51 +96,6 @@ resource "yandex_kubernetes_node_group" "elastic_master_a" {
     network_interface {
       nat        = false
       subnet_ids = [local.subnet_a_id]
-    }
-
-    resources {
-      cores  = 2
-      memory = 4
-    }
-
-    boot_disk {
-      type = "network-hdd"
-      size = 64
-    }
-
-    scheduling_policy {
-      preemptible = true
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [instance_template[0].network_interface[0].security_group_ids]
-  }
-}
-
-resource "yandex_kubernetes_node_group" "elastic_master_b" {
-  name        = "elastic-master-b"
-  description = "Elasticsearch master in ru-central1-b"
-  cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
-  version     = "1.33"
-
-  scale_policy {
-    fixed_scale {
-      size = 1
-    }
-  }
-
-  allocation_policy {
-    location { zone = local.subnet_b_zone }
-  }
-
-  instance_template {
-    platform_id = "standard-v3"
-    name        = "rc1b-elastic-master-{instance.short_id}"
-
-    network_interface {
-      nat        = false
-      subnet_ids = [local.subnet_b_id]
     }
 
     resources {
@@ -235,51 +186,6 @@ resource "yandex_kubernetes_node_group" "elastic_data_a" {
     network_interface {
       nat        = false
       subnet_ids = [local.subnet_a_id]
-    }
-
-    resources {
-      cores  = 4
-      memory = 16
-    }
-
-    boot_disk {
-      type = "network-hdd"
-      size = 64
-    }
-
-    scheduling_policy {
-      preemptible = true
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [instance_template[0].network_interface[0].security_group_ids]
-  }
-}
-
-resource "yandex_kubernetes_node_group" "elastic_data_b" {
-  name        = "elastic-data-b"
-  description = "Elasticsearch data in ru-central1-b"
-  cluster_id  = yandex_kubernetes_cluster.elastic_chaos.id
-  version     = "1.33"
-
-  scale_policy {
-    fixed_scale {
-      size = 2
-    }
-  }
-
-  allocation_policy {
-    location { zone = local.subnet_b_zone }
-  }
-
-  instance_template {
-    platform_id = "standard-v3"
-    name        = "rc1b-elastic-data-{instance.short_id}"
-
-    network_interface {
-      nat        = false
-      subnet_ids = [local.subnet_b_id]
     }
 
     resources {

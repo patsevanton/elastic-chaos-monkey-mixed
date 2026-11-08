@@ -17,7 +17,7 @@ import (
 const (
 	indexName     = "load"
 	indexShards   = 1
-	indexReplicas = 2
+	indexReplicas = 1
 )
 
 var (

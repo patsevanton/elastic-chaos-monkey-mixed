@@ -2,7 +2,7 @@ image:
   registry: ghcr.io
   repository: traefik/traefik
 deployment:
-  replicas: 3
+  replicas: 2
 topologySpreadConstraints:
   - maxSkew: 1
     topologyKey: topology.kubernetes.io/zone

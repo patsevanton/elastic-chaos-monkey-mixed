@@ -43,11 +43,29 @@ ELASTIC_DATA_SG=$DATA_SG
 APP_SG=$APP_SG
 EOF
 
+wait_sg() {
+  local ng="$1" want="$2" i cur
+  for i in $(seq 1 120); do
+    cur="$(ng_json "$ng" | jq -r '.node_template.network_interface_specs[0].security_group_ids // [] | join(",")')"
+    [ "$cur" = "$want" ] && return 0
+    sleep 5
+  done
+  echo "$ng: SG не стал [$want] за 10 минут (сейчас [$cur])" >&2
+  return 1
+}
+
 apply_isolation_sg() {
   local ng="$1" subnets="$2" sg="$3"
-  "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: isolate SG $ng start" sg isolate "$ZONE" "$ng" start
-  yc managed-kubernetes node-group update "$ng" --network-interface "subnets=${subnets},security-group-ids=[${sg}]"
-  "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: isolate SG $ng end" sg isolate "$ZONE" "$ng" end
+  # Аннотация — наблюдаемость, а не часть смены SG: её сбой не должен
+  # блокировать изоляцию/откат (NLB может ещё слать трафик в мёртвую зону).
+  "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: isolate SG $ng start" sg isolate "$ZONE" "$ng" start || \
+    echo "annotate: пропущено (isolate $ng start)" >&2
+  # --async обязателен: синхронный update ждёт Ready-нод, а изолированная
+  # зона Ready не станет никогда. Ждём фактическую смену SG в спецификации.
+  yc managed-kubernetes node-group update "$ng" --async --network-interface "subnets=${subnets},security-group-ids=[${sg}]"
+  wait_sg "$ng" "$sg"
+  "$ROOT/scripts/annotate-grafana.sh" "zone $ZONE: isolate SG $ng end" sg isolate "$ZONE" "$ng" end || \
+    echo "annotate: пропущено (isolate $ng end)" >&2
 }
 
 echo "isolate $ZONE sg=$SG_ID ng=$MASTER_NG,$DATA_NG,$APP_NG"

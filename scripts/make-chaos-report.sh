@@ -21,6 +21,19 @@ RATE=1m
 
 [ -f "$OUT_DIR/windows.tsv" ] || { echo "нет $OUT_DIR/windows.tsv — сначала collect-chaos-report.sh" >&2; exit 1; }
 
+# Качественные выводы AI кладёт в files рядом с сырыми данными, чтобы отчёт
+# оставался воспроизводимым: перегенерация не затирает текст.
+#   conclusions.tsv  — "<idx>\t<вывод>" по строкам таблиц;
+#   findings.md      — тело раздела «Ключевые находки»;
+#   quality-notes.md — дополнительные пункты к «Замечаниям к качеству данных».
+conclusion_for() {
+  local idx="$1" text=""
+  if [ -f "$OUT_DIR/conclusions.tsv" ]; then
+    text="$(awk -F'\t' -v i="$idx" '$1==i{sub(/^[^\t]*\t/,""); print; exit}' "$OUT_DIR/conclusions.tsv")"
+  fi
+  printf '%s' "${text:-_заполняет AI_}"
+}
+
 # --- выражения метрик (источник истины для ссылок) ---
 expr_of() {
   case "$1" in
@@ -173,7 +186,7 @@ label_for() {
     [ "$kind" = chaos ] || continue
     metric_list="$(effect_metrics "$kind" "$scope" "$action")"
     # shellcheck disable=SC2086
-    printf '| %s | %s | %s | %s | _заполняет AI_ |\n' "$idx" "$(label_for "$kind" "$zone" "$scope" "$action")" "$(where_cell "$pre_start" "$end" $metric_list)" "$(link_for "$idx" "$pre_start" "$end" $metric_list)"
+    printf '| %s | %s | %s | %s | %s |\n' "$idx" "$(label_for "$kind" "$zone" "$scope" "$action")" "$(where_cell "$pre_start" "$end" $metric_list)" "$(link_for "$idx" "$pre_start" "$end" $metric_list)" "$(conclusion_for "$idx")"
   done
   echo
   echo "### Смена security group (зона \`$ZONES\`)"
@@ -185,18 +198,25 @@ label_for() {
     [ "$kind" = sg ] || continue
     metric_list="$(effect_metrics "$kind" "$scope" "$action")"
     # shellcheck disable=SC2086
-    printf '| %s | %s | %s | %s | _заполняет AI_ |\n' "$idx" "$(label_for "$kind" "$zone" "$scope" "$action")" "$(where_cell "$pre_start" "$end" $metric_list)" "$(link_for "$idx" "$pre_start" "$end" $metric_list)"
+    printf '| %s | %s | %s | %s | %s |\n' "$idx" "$(label_for "$kind" "$zone" "$scope" "$action")" "$(where_cell "$pre_start" "$end" $metric_list)" "$(link_for "$idx" "$pre_start" "$end" $metric_list)" "$(conclusion_for "$idx")"
   done
   echo
   echo "## Ключевые находки"
   echo
-  echo "_Заполняет AI по \`analysis.tsv\` и графикам: основной вклад, сравнение шагов, связность, сохранность данных._"
+  if [ -s "$OUT_DIR/findings.md" ]; then
+    cat "$OUT_DIR/findings.md"
+  else
+    echo "_Заполняет AI по \`analysis.tsv\` и графикам: основной вклад, сравнение шагов, связность, сохранность данных._"
+  fi
   echo
   echo "## Замечания к качеству данных"
   echo
   echo "- Короткие SG-окна (30–60 c) при \`STEP_QUERY=30\` дают 1–2 точки на метрику — низкоуровневые метрики ES шумные."
   echo "- \`pod-kill\` задевает поды loadgen: счётчики успевают сброситься (провалы \`es_nodes\`/\`docs\`)."
   echo "- Для повторного прогона отчёта задавать \`RUN_FROM\` = epoch начала прогона."
+  if [ -s "$OUT_DIR/quality-notes.md" ]; then
+    cat "$OUT_DIR/quality-notes.md"
+  fi
 } > "$REPORT"
 
 echo "отчёт: $REPORT"

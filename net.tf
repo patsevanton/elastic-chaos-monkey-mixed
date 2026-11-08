@@ -30,20 +30,22 @@ resource "yandex_vpc_subnet" "elastic_chaos_a" {
   route_table_id = yandex_vpc_route_table.rt.id
 }
 
-resource "yandex_vpc_subnet" "elastic_chaos_b" {
-  folder_id      = var.folder_id
-  name           = "elastic-chaos-b"
-  v4_cidr_blocks = ["10.0.2.0/24"]
-  zone           = "ru-central1-b"
-  network_id     = yandex_vpc_network.elastic_chaos.id
-  route_table_id = yandex_vpc_route_table.rt.id
-}
-
 resource "yandex_vpc_subnet" "elastic_chaos_d" {
   folder_id      = var.folder_id
   name           = "elastic-chaos-d"
   v4_cidr_blocks = ["10.0.3.0/24"]
   zone           = "ru-central1-d"
+  network_id     = yandex_vpc_network.elastic_chaos.id
+  route_table_id = yandex_vpc_route_table.rt.id
+}
+
+# Третья локация регионального мастера managed-kubernetes: зона b выведена
+# из эксплуатации, поэтому мастер размещается в e. Рабочих node group в e нет.
+resource "yandex_vpc_subnet" "elastic_chaos_e" {
+  folder_id      = var.folder_id
+  name           = "elastic-chaos-e"
+  v4_cidr_blocks = ["10.0.4.0/24"]
+  zone           = "ru-central1-e"
   network_id     = yandex_vpc_network.elastic_chaos.id
   route_table_id = yandex_vpc_route_table.rt.id
 }
