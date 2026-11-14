@@ -1,6 +1,6 @@
 fullnameOverride: elasticsearch-exporter
 
-replicaCount: 3
+replicaCount: 2
 
 topologySpreadConstraints:
   - maxSkew: 1

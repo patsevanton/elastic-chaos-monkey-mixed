@@ -59,7 +59,7 @@ NLB_SUBNET_ID="$(terraform output -raw nlb_subnet_id)" envsubst < manifests/vmin
 
 # Установка prometheus-elasticsearch-exporter
 
-В контексте `elastic` (ES живёт там), helm-чарт `prometheus-community/prometheus-elasticsearch-exporter` **7.4.0** с `-f elasticsearch-exporter-values.yaml`: 3 реплики с spread по зонам, `es.uri` на `elastic-es-http.elastic.svc:9200`, `serviceMonitor.enabled: true`. Deployment в манифестах больше нет.
+В контексте `elastic` (ES живёт там), helm-чарт `prometheus-community/prometheus-elasticsearch-exporter` **7.4.0** с `-f elasticsearch-exporter-values.yaml`: 2 реплики с spread по зонам, `es.uri` на `elastic-es-http.elastic.svc:9200`, `serviceMonitor.enabled: true`. Deployment в манифестах больше нет.
 
 ```bash
 helm --kube-context elastic upgrade --install elasticsearch-exporter \
